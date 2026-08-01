@@ -1,0 +1,9 @@
+[build]
+  command = "cd app && npm run build"
+  publish = "app/dist"
+  functions = "netlify/functions"
+
+[[redirects]]
+  from = "/api/research"
+  to = "/.netlify/functions/research"
+  status = 200

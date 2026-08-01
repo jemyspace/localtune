@@ -1,0 +1,18 @@
+# Dependencies
+app/node_modules/
+
+# Build output (rebuilt on Netlify)
+app/dist/
+
+# Vite cache
+app/node_modules/.vite/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+*.log
+.env
+.env.*
+
+# Cursor (optional local)
+.cursor/
