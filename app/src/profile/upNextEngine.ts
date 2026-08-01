@@ -1,3 +1,5 @@
+import type { AudioFeaturesStore } from '../audio/audioFeaturesStore'
+import type { AudioFeatures } from '../audio/types'
 import type { Library } from '../library'
 import type { TasteApi } from '../taste/tasteApi'
 import { trackKeyFor } from '../trackKey'
@@ -74,13 +76,32 @@ function isRecentlyPlayed(
   return now - stats.lastPlayedAt < RECENT_PLAY_MS
 }
 
+function moodSimilarity(
+  current: AudioFeatures | null | undefined,
+  candidateKey: string,
+  featuresStore: AudioFeaturesStore | undefined,
+): number {
+  if (!current || !featuresStore) return 0
+  const other = featuresStore.get(candidateKey)
+  if (!other) return 0
+  if (other.mood === current.mood) return 0.12
+  const energyDiff = Math.abs(other.energy - current.energy)
+  if (energyDiff < 0.08) return 0.06
+  return 0
+}
+
 function rankedItems(
   playable: PlayableEntry[],
   currentTrackId: string | null,
   tasteApi: TasteApi,
+  featuresStore?: AudioFeaturesStore,
 ): UpNextItem[] {
   const now = Date.now()
   const candidates = playable.filter((p) => p.track.id !== currentTrackId)
+  const currentTrack = playable.find((p) => p.track.id === currentTrackId)?.track
+  const currentFeatures = currentTrack
+    ? featuresStore?.get(trackKeyFor(currentTrack))
+    : null
 
   const rawArtist = candidates.map((p) => artistScoreForName(tasteApi, p.track.artist))
   const rawGenre = candidates.map((p) => genreScoreForName(tasteApi, p.track.genre ?? 'Unknown'))
@@ -91,10 +112,12 @@ function rankedItems(
   const normTrack = normalizeScores(rawTrack)
 
   const scored = candidates.map((p, i) => {
+    const moodBoost = moodSimilarity(currentFeatures, trackKeyFor(p.track), featuresStore)
     const score =
       0.5 * (normArtist[i] ?? 0) +
       0.25 * (normGenre[i] ?? 0) +
       0.25 * (normTrack[i] ?? 0) +
+      moodBoost +
       stableNoise(p.track.id)
 
     return {
@@ -136,14 +159,19 @@ export class UpNextEngine {
     updatedAt: Date.now(),
   }
 
-  refresh(library: Library, currentTrackId: string | null, tasteApi: TasteApi): void {
+  refresh(
+    library: Library,
+    currentTrackId: string | null,
+    tasteApi: TasteApi,
+    featuresStore?: AudioFeaturesStore,
+  ): void {
     this.profile = buildProfile(tasteApi)
     const playable = playableEntries(library)
 
     if (this.profile.coldStart || this.profile.meaningfulPlayCount < COLD_START_N) {
       this.items = sequentialItems(playable, currentTrackId)
     } else {
-      this.items = rankedItems(playable, currentTrackId, tasteApi)
+      this.items = rankedItems(playable, currentTrackId, tasteApi, featuresStore)
     }
   }
 

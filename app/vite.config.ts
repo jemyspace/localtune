@@ -7,4 +7,7 @@ export default defineConfig({
     port: 5173,
   },
   plugins: [researchApiPlugin()],
+  optimizeDeps: {
+    exclude: ['@unimusic/chromaprint'],
+  },
 })

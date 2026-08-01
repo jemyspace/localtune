@@ -1,7 +1,9 @@
+import type { AudioFeaturesStore } from '../audio/audioFeaturesStore'
 import type { DiscoveryStore } from '../discovery/discoveryStore'
 import type { Player } from '../player'
 import { isResearchEnabled } from '../settings'
 import type { Track } from '../types'
+import { trackKeyFor } from '../trackKey'
 import { AmbienceController } from './ambience'
 import { applyTheme, clearAdaptiveTheme } from './themeApplier'
 import { findResearchGenreHint, resolveThemeId } from './themeResolver'
@@ -14,12 +16,18 @@ export class ThemeController {
   private readonly ambience = new AmbienceController()
   private readonly player: Player
   private readonly discoveryStore: DiscoveryStore
+  private readonly featuresStore: AudioFeaturesStore
   private currentThemeId: ThemeId = 'neutral'
   private readonly listeners = new Set<ThemeListener>()
 
-  constructor(player: Player, discoveryStore: DiscoveryStore) {
+  constructor(
+    player: Player,
+    discoveryStore: DiscoveryStore,
+    featuresStore: AudioFeaturesStore,
+  ) {
     this.player = player
     this.discoveryStore = discoveryStore
+    this.featuresStore = featuresStore
     this.ambience.attach(player.getAudio())
     this.syncMode()
   }
@@ -79,7 +87,8 @@ export class ThemeController {
 
   private applyForTrack(track: Track): void {
     const hint = findResearchGenreHint(this.discoveryStore, track)
-    const themeId = resolveThemeId(track, hint, isResearchEnabled())
+    const features = this.featuresStore.get(trackKeyFor(track))
+    const themeId = resolveThemeId(track, hint, isResearchEnabled(), features)
     this.setTheme(themeId)
   }
 

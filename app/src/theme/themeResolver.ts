@@ -1,4 +1,5 @@
 import type { DiscoveryStore } from '../discovery/discoveryStore'
+import type { AudioFeatures, AudioMood } from '../audio/types'
 import { normalizeLabel } from '../trackKey'
 import type { Track } from '../types'
 import { genreToThemeId, inferGenreFromText } from './themeMap'
@@ -26,10 +27,26 @@ export function findResearchGenreHint(store: DiscoveryStore, track: Track): stri
   return recent?.genre
 }
 
+export function moodToThemeId(mood: AudioMood): ThemeId {
+  switch (mood) {
+    case 'energetic':
+      return 'electronic'
+    case 'calm':
+      return 'classical'
+    case 'bright':
+      return 'pop'
+    case 'warm':
+      return 'soul'
+    default:
+      return 'neutral'
+  }
+}
+
 export function resolveThemeId(
   track: Track,
   researchGenreHint: string | undefined,
   researchEnabled: boolean,
+  audioFeatures?: AudioFeatures | null,
 ): ThemeId {
   if (researchEnabled && researchGenreHint) {
     const fromResearch = genreToThemeId(researchGenreHint)
@@ -40,7 +57,15 @@ export function resolveThemeId(
   if (fromTag !== 'neutral') return fromTag
 
   const inferred = inferGenreFromText(track.title, track.artist, track.fileName, track.album)
-  if (inferred) return genreToThemeId(inferred)
+  if (inferred) {
+    const fromText = genreToThemeId(inferred)
+    if (fromText !== 'neutral') return fromText
+  }
+
+  if (audioFeatures) {
+    const fromMood = moodToThemeId(audioFeatures.mood)
+    if (fromMood !== 'neutral') return fromMood
+  }
 
   return 'neutral'
 }

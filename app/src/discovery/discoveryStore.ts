@@ -12,8 +12,8 @@ function emptyBlob(): DiscoveryBlob {
   return { schemaVersion: 1, items: [], updatedAt: Date.now() }
 }
 
-function itemId(artist: string, title: string | undefined): string {
-  return `musicbrainz:${normalizeLabel(artist)}:${normalizeLabel(title ?? '')}`
+function itemId(source: string, artist: string, title: string | undefined): string {
+  return `${source}:${normalizeLabel(artist)}:${normalizeLabel(title ?? '')}`
 }
 
 export class DiscoveryStore {
@@ -45,14 +45,15 @@ export class DiscoveryStore {
     for (const r of raw) {
       const artist = r.artist.trim() || 'Unknown'
       const title = r.title?.trim()
-      const id = itemId(artist, title)
+      const source = r.source ?? 'musicbrainz'
+      const id = itemId(source, artist, title)
       const existing = byId.get(id)
       const item: DiscoveryItem = {
         id,
         artist,
         title,
         genre: r.genre,
-        source: 'musicbrainz',
+        source,
         sourceUrl: r.sourceUrl,
         reason: r.reason ?? 'Ditemukan via MusicBrainz',
         updatedAt: now,

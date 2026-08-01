@@ -1,3 +1,5 @@
+import { AudioIntelTrigger } from './audio/audioIntelTrigger'
+import type { AudioMood } from './audio/types'
 import { DiscoveryStore } from './discovery/discoveryStore'
 import { ResearchClient } from './discovery/researchClient'
 import { ResearchTrigger } from './discovery/researchTrigger'
@@ -14,6 +16,7 @@ import { ListenTracker } from './taste/listenTracker'
 import { TasteApi } from './taste/tasteApi'
 import { ThemeController } from './theme/themeController'
 import { THEME_LABELS } from './theme/types'
+import { trackKeyFor } from './trackKey'
 import type { Track } from './types'
 import './style.css'
 
@@ -24,17 +27,30 @@ const upNextEngine = new UpNextEngine()
 const discoveryStore = new DiscoveryStore()
 const researchClient = new ResearchClient()
 const researchTrigger = new ResearchTrigger(researchClient, discoveryStore, tasteApi, library)
-const themeController = new ThemeController(player, discoveryStore)
+const audioIntel = new AudioIntelTrigger(discoveryStore, tasteApi, library)
+const themeController = new ThemeController(player, discoveryStore, audioIntel.getFeaturesStore())
 const listenTracker = new ListenTracker(player, library, tasteApi)
 listenTracker.bindTimeupdate()
-listenTracker.setMeaningfulPlayHandler((track) => researchTrigger.onMeaningfulPlay(track))
+listenTracker.setMeaningfulPlayHandler((track) => {
+  researchTrigger.onMeaningfulPlay(track)
+  audioIntel.onTrackActivity(track)
+})
 library.onTrackEnriched = (track) => {
   if (player.current()?.id === track.id) {
     researchTrigger.onTrackUpdated(track)
+    audioIntel.onTrackActivity(track)
     themeController.onDiscoveryUpdate()
   }
 }
 const trackHandlers = listenTracker.handlers()
+
+const MOOD_LABELS: Record<AudioMood, string> = {
+  energetic: 'Energik',
+  calm: 'Tenang',
+  bright: 'Cerah',
+  warm: 'Hangat',
+  balanced: 'Seimbang',
+}
 
 const app = document.querySelector<HTMLDivElement>('#app')!
 app.innerHTML = `
@@ -295,7 +311,7 @@ function renderDiscovery(): void {
 
 function refreshUpNext(): void {
   const currentId = player.current()?.id ?? null
-  upNextEngine.refresh(library, currentId, tasteApi)
+  upNextEngine.refresh(library, currentId, tasteApi, audioIntel.getFeaturesStore())
   player.setNextResolver(() => upNextEngine.getNextIndex())
   renderTaste()
   renderUpNext()
@@ -386,15 +402,18 @@ function renderAppearance(): void {
   const mode = themeController.getMode()
   const themeId = themeController.getActiveThemeId()
   const adaptive = mode === 'adaptive'
+  const current = player.current()
+  const features = current ? audioIntel.getFeaturesStore().get(trackKeyFor(current)) : null
 
   themeActiveEl.hidden = !adaptive
   if (adaptive) {
-    themeActiveEl.textContent = `Tema aktif: ${THEME_LABELS[themeId]}`
+    const moodPart = features ? ` · suasana ${MOOD_LABELS[features.mood]}` : ''
+    themeActiveEl.textContent = `Tema aktif: ${THEME_LABELS[themeId]}${moodPart}`
   }
 
   appearanceHintEl.textContent = adaptive
-    ? 'Warna UI berubah per lagu dari tag lokal, nama file, atau metadata research.'
-    : 'Adaptif mengikuti genre dari tag lokal & metadata research (bukan AI). Hemat data; reset ke Default saat tab ditutup.'
+    ? 'Warna UI dari tag, metadata research, atau analisis nada lokal (tanpa unggah audio).'
+    : 'Adaptif: tag lokal, research internet, dan analisis nada. Reset ke Default saat tab ditutup.'
 }
 
 function applyThemeForCurrentTrack(): void {
@@ -493,6 +512,12 @@ uiModeInputs.forEach((input) => {
     applyThemeForCurrentTrack()
     renderAppearance()
   })
+})
+
+audioIntel.subscribe(() => {
+  themeController.onTrackChange(player.current())
+  refreshUpNext()
+  renderAppearance()
 })
 
 themeController.subscribe(() => renderAppearance())

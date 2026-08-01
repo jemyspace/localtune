@@ -13,6 +13,7 @@
     "vite": "^7.2.4"
   },
   "dependencies": {
+    "@unimusic/chromaprint": "^0.1.4",
     "jsmediatags": "^3.9.7"
   }
 }

@@ -14,6 +14,7 @@ export interface RawDiscovery {
   genre?: string
   sourceUrl?: string
   reason?: string
+  source?: 'musicbrainz' | 'acoustid'
 }
 
 export interface DiscoveryItem {
@@ -21,7 +22,7 @@ export interface DiscoveryItem {
   artist: string
   title?: string
   genre?: string
-  source: 'musicbrainz'
+  source: 'musicbrainz' | 'acoustid'
   sourceUrl?: string
   reason?: string
   updatedAt: number
