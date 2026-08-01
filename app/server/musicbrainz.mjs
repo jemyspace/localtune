@@ -1,4 +1,4 @@
-const USER_AGENT = 'LocalTune/0.1 (local-music-player; contact: local@example.com)'
+const USER_AGENT = 'LocalTune/0.1 (https://github.com/jemyspace/localtune; contact: jemyspace@users.noreply.github.com)'
 const MB_BASE = 'https://musicbrainz.org/ws/2'
 
 function sleep(ms) {
@@ -16,9 +16,6 @@ function escLucene(s) {
   return String(s).replace(/\\/g, '\\\\').replace(/"/g, '\\"')
 }
 
-/**
- * @param {string} path
- */
 async function mbGet(path) {
   const res = await fetch(`${MB_BASE}/${path}`, {
     headers: {
@@ -33,8 +30,7 @@ async function mbGet(path) {
 }
 
 /**
- * @param {{ artist: string, title: string, topArtists?: string[], topGenres?: string[] }} seed
- * @returns {Promise<Array<{ artist: string, title?: string, genre?: string, sourceUrl?: string, reason?: string }>>}
+ * Fast path for serverless (Netlify 10s limit): max 2 MusicBrainz calls.
  */
 export async function fetchMusicBrainzDiscoveries(seed) {
   const artist = String(seed.artist ?? '').trim()
@@ -50,92 +46,71 @@ export async function fetchMusicBrainzDiscoveries(seed) {
     items.push(entry)
   }
 
-  if (!artist || norm(artist) === 'unknown') {
-    if (!title) return []
-    const q = `recording:"${escLucene(title)}"`
-    const data = await mbGet(`recording?query=${encodeURIComponent(q)}&limit=8&fmt=json`)
-    for (const rec of data.recordings ?? []) {
-      const recArtist =
-        rec['artist-credit']?.[0]?.name ?? rec['artist-credit']?.[0]?.artist?.name ?? 'Unknown'
-      add({
-        artist: recArtist,
-        title: rec.title,
-        sourceUrl: `https://musicbrainz.org/recording/${rec.id}`,
-        reason: 'Judul mirip di MusicBrainz',
-      })
-    }
-    return items.slice(0, 12)
-  }
-
-  const recordingQuery = title
-    ? `artist:"${escLucene(artist)}" AND recording:"${escLucene(title)}"`
-    : `artist:"${escLucene(artist)}"`
-  const recordingData = await mbGet(
-    `recording?query=${encodeURIComponent(recordingQuery)}&limit=10&fmt=json`,
-  )
-  for (const rec of recordingData.recordings ?? []) {
-    const recArtist =
-      rec['artist-credit']?.[0]?.name ?? rec['artist-credit']?.[0]?.artist?.name ?? artist
-    const tags = (rec.tags ?? []).slice(0, 2).map((t) => t.name).join(', ')
-    add({
-      artist: recArtist,
-      title: rec.title,
-      genre: tags || undefined,
-      sourceUrl: `https://musicbrainz.org/recording/${rec.id}`,
-      reason: 'Rekaman terkait di MusicBrainz',
-    })
-  }
-
-  await sleep(1100)
-
-  const artistData = await mbGet(
-    `artist?query=${encodeURIComponent(`artist:"${escLucene(artist)}"`)}&limit=1&fmt=json`,
-  )
-  const mbArtist = artistData.artists?.[0]
-  if (mbArtist?.id) {
-    const genreHint = (mbArtist.tags ?? []).slice(0, 2).map((t) => t.name).join(', ')
-    await sleep(1100)
-    const byArtist = await mbGet(`recording?artist=${mbArtist.id}&limit=12&fmt=json`)
-    for (const rec of byArtist.recordings ?? []) {
-      add({
-        artist: mbArtist.name ?? artist,
-        title: rec.title,
-        genre: genreHint || undefined,
-        sourceUrl: `https://musicbrainz.org/recording/${rec.id}`,
-        reason: `Lainnya dari artis ${mbArtist.name ?? artist}`,
-      })
-    }
-  }
-
-  for (const related of (seed.topArtists ?? []).slice(0, 2)) {
-    if (!related || norm(related) === norm(artist) || norm(related) === 'unknown') continue
-    await sleep(1100)
-    try {
-      const relData = await mbGet(
-        `recording?query=${encodeURIComponent(`artist:"${escLucene(related)}"`)}&limit=5&fmt=json`,
-      )
-      for (const rec of relData.recordings ?? []) {
+  try {
+    if (!artist || norm(artist) === 'unknown') {
+      if (!title) return []
+      const q = `recording:"${escLucene(title)}"`
+      const data = await mbGet(`recording?query=${encodeURIComponent(q)}&limit=8&fmt=json`)
+      for (const rec of data.recordings ?? []) {
         const recArtist =
-          rec['artist-credit']?.[0]?.name ?? rec['artist-credit']?.[0]?.artist?.name ?? related
+          rec['artist-credit']?.[0]?.name ?? rec['artist-credit']?.[0]?.artist?.name ?? 'Unknown'
         add({
           artist: recArtist,
           title: rec.title,
           sourceUrl: `https://musicbrainz.org/recording/${rec.id}`,
-          reason: `Selera Anda: artis ${related}`,
+          reason: 'Judul mirip di MusicBrainz',
         })
       }
-    } catch {
-      /* soft-fail per related artist */
+      return items.slice(0, 12)
     }
+
+    const recordingQuery = title
+      ? `artist:"${escLucene(artist)}" AND recording:"${escLucene(title)}"`
+      : `artist:"${escLucene(artist)}"`
+    const recordingData = await mbGet(
+      `recording?query=${encodeURIComponent(recordingQuery)}&limit=10&fmt=json`,
+    )
+    for (const rec of recordingData.recordings ?? []) {
+      const recArtist =
+        rec['artist-credit']?.[0]?.name ?? rec['artist-credit']?.[0]?.artist?.name ?? artist
+      const tags = (rec.tags ?? []).slice(0, 2).map((t) => t.name).join(', ')
+      add({
+        artist: recArtist,
+        title: rec.title,
+        genre: tags || undefined,
+        sourceUrl: `https://musicbrainz.org/recording/${rec.id}`,
+        reason: 'Rekaman terkait di MusicBrainz',
+      })
+    }
+
+    if (items.length < 8) {
+      await sleep(600)
+      const artistData = await mbGet(
+        `artist?query=${encodeURIComponent(`artist:"${escLucene(artist)}"`)}&limit=1&fmt=json`,
+      )
+      const mbArtist = artistData.artists?.[0]
+      if (mbArtist?.id) {
+        const genreHint = (mbArtist.tags ?? []).slice(0, 2).map((t) => t.name).join(', ')
+        const byArtist = await mbGet(`recording?artist=${mbArtist.id}&limit=10&fmt=json`)
+        for (const rec of byArtist.recordings ?? []) {
+          add({
+            artist: mbArtist.name ?? artist,
+            title: rec.title,
+            genre: genreHint || undefined,
+            sourceUrl: `https://musicbrainz.org/recording/${rec.id}`,
+            reason: `Lainnya dari artis ${mbArtist.name ?? artist}`,
+          })
+        }
+      }
+    }
+  } catch (err) {
+    console.error('MusicBrainz research error:', err)
+    if (items.length === 0) throw err
   }
 
   return items.slice(0, 15)
 }
 
-/**
- * @param {import('http').IncomingMessage} req
- * @param {import('http').ServerResponse} res
- */
 export async function handleResearchRequest(req, res) {
   const url = new URL(req.url ?? '/', 'http://localhost')
   const artist = url.searchParams.get('artist') ?? ''

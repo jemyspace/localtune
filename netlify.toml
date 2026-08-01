@@ -7,6 +7,13 @@
 [build.environment]
   NODE_VERSION = "22"
 
+[functions]
+  node_bundler = "esbuild"
+  included_files = ["app/server/**"]
+
+[functions.research]
+  timeout = 26
+
 [[redirects]]
   from = "/api/research"
   to = "/.netlify/functions/research"

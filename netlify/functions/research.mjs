@@ -1,4 +1,4 @@
-import { handleResearchRequest } from '../../app/server/musicbrainz.mjs'
+import { fetchMusicBrainzDiscoveries } from '../../app/server/musicbrainz.mjs'
 
 export const handler = async (event) => {
   if (event.httpMethod !== 'GET') {
@@ -6,40 +6,29 @@ export const handler = async (event) => {
   }
 
   const params = event.queryStringParameters ?? {}
-  const search = new URLSearchParams(
-    Object.entries(params).flatMap(([k, v]) => (v != null ? [[k, v]] : [])),
-  ).toString()
-  const req = {
-    url: `/api/research${search ? `?${search}` : ''}`,
-    method: 'GET',
-  }
-
-  let statusCode = 200
-  let body = ''
-
-  const res = {
-    setHeader() {},
-    statusCode: 200,
-    end(payload) {
-      body = payload
-      statusCode = this.statusCode
-    },
-    get statusCode() {
-      return statusCode
-    },
-    set statusCode(code) {
-      statusCode = code
-    },
-  }
+  const artist = params.artist ?? ''
+  const title = params.title ?? ''
+  const topArtists = (params.topArtists ?? '')
+    .split(',')
+    .map((s) => s.trim())
+    .filter(Boolean)
+  const topGenres = (params.topGenres ?? '')
+    .split(',')
+    .map((s) => s.trim())
+    .filter(Boolean)
 
   try {
-    await handleResearchRequest(req, res)
+    const items = await fetchMusicBrainzDiscoveries({ artist, title, topArtists, topGenres })
     return {
-      statusCode,
-      headers: { 'Content-Type': 'application/json' },
-      body,
+      statusCode: 200,
+      headers: {
+        'Content-Type': 'application/json',
+        'Cache-Control': 'private, max-age=300',
+      },
+      body: JSON.stringify({ items }),
     }
-  } catch {
+  } catch (err) {
+    console.error('research function error:', err)
     return {
       statusCode: 500,
       headers: { 'Content-Type': 'application/json' },
