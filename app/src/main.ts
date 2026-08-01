@@ -3,6 +3,7 @@ import { ResearchClient } from './discovery/researchClient'
 import { ResearchTrigger } from './discovery/researchTrigger'
 import type { ResearchStatus } from './discovery/types'
 import { matchesLocalLibrary } from './discovery/localMatch'
+import { buildSeed, isSeedUsable } from './discovery/seed'
 import { pickAudioFiles } from './filePicker'
 import { Library } from './library'
 import { Player } from './player'
@@ -27,6 +28,12 @@ const themeController = new ThemeController(player, discoveryStore)
 const listenTracker = new ListenTracker(player, library, tasteApi)
 listenTracker.bindTimeupdate()
 listenTracker.setMeaningfulPlayHandler((track) => researchTrigger.onMeaningfulPlay(track))
+library.onTrackEnriched = (track) => {
+  if (player.current()?.id === track.id) {
+    researchTrigger.onTrackUpdated(track)
+    themeController.onDiscoveryUpdate()
+  }
+}
 const trackHandlers = listenTracker.handlers()
 
 const app = document.querySelector<HTMLDivElement>('#app')!
@@ -109,7 +116,7 @@ app.innerHTML = `
           <input type="checkbox" id="research-enabled" checked />
           Perbarui saran dari internet saat memutar
         </label>
-        <button type="button" class="btn ghost small" id="btn-refresh-discovery" hidden>Perbarui sekarang</button>
+        <button type="button" class="btn ghost small" id="btn-refresh-discovery">Perbarui sekarang</button>
         <ul class="discovery-list" id="discovery-list"></ul>
         <p class="discovery-empty" id="discovery-empty" hidden>Belum ada saran. Putar musik untuk memulai riset metadata.</p>
       </aside>
@@ -219,6 +226,24 @@ function statusLabel(status: ResearchStatus): string {
   return ''
 }
 
+function discoveryEmptyMessage(): string {
+  if (!isResearchEnabled()) {
+    return 'Research dimatikan. Aktifkan toggle di atas untuk saran dari internet.'
+  }
+  const status = researchTrigger.getStatus()
+  if (status === 'updating') return 'Memperbarui saran dari internet…'
+  if (status === 'error') return 'Gagal memperbarui. Coba klik Perbarui sekarang.'
+  const current = player.current()
+  if (!current) {
+    return 'Pilih musik lalu putar lagu untuk memulai riset metadata.'
+  }
+  const seed = buildSeed(current, upNextEngine.getProfile())
+  if (!isSeedUsable(seed)) {
+    return 'Tag artis/judul belum cukup. Tunggu metadata ID3 dimuat atau gunakan file dengan nama yang jelas.'
+  }
+  return 'Belum ada hasil untuk lagu ini. Coba putar lagu lain atau klik Perbarui sekarang.'
+}
+
 function renderDiscovery(): void {
   const hasLibrary = library.getAll().length > 0
   discoveryEl.hidden = !hasLibrary
@@ -230,6 +255,7 @@ function renderDiscovery(): void {
 
   if (items.length === 0) {
     discoveryListEl.innerHTML = ''
+    discoveryEmptyEl.textContent = discoveryEmptyMessage()
     return
   }
 
@@ -443,6 +469,7 @@ discoveryStore.subscribe(() => {
 researchTrigger.onStatusChange((status) => {
   discoveryStatusEl.textContent = statusLabel(status)
   discoveryStatusEl.dataset.state = status
+  renderDiscovery()
 })
 
 researchEnabledEl.checked = isResearchEnabled()
@@ -452,7 +479,7 @@ researchEnabledEl.addEventListener('change', () => {
 })
 
 btnRefreshDiscovery.addEventListener('click', () => {
-  researchTrigger.forceRefreshCurrent()
+  researchTrigger.forceRefreshCurrent(player.current())
 })
 
 renderDiscovery()
@@ -478,7 +505,7 @@ $('#btn-pick').addEventListener('click', async () => {
   discoveryStore.refreshLocalMatches(library)
   renderNow()
   if (!player.current()) {
-    await player.playIndex(0, false)
+    await player.playIndex(0, true)
     renderNow()
   }
   // re-render when tags arrive

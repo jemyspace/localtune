@@ -4,6 +4,7 @@ import type { Track } from './types'
 
 export class Library {
   private tracks: Track[] = []
+  onTrackEnriched?: (track: Track) => void
 
   getAll(): Track[] {
     return this.tracks
@@ -56,5 +57,7 @@ export class Library {
       album: tags.album,
       genre: tags.genre || 'Unknown',
     })
+    const updated = this.getById(track.id)
+    if (updated) this.onTrackEnriched?.(updated)
   }
 }
