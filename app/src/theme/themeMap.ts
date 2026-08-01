@@ -47,3 +47,18 @@ export function genreToThemeId(raw: string): ThemeId {
 
   return 'neutral'
 }
+
+/** Scan title, artist, filename for genre keywords when ID3 is missing. */
+export function inferGenreFromText(...parts: (string | undefined)[]): string | undefined {
+  const haystack = parts
+    .filter(Boolean)
+    .join(' ')
+    .toLowerCase()
+  if (!haystack) return undefined
+
+  const ordered = Object.keys(SYNONYMS).sort((a, b) => b.length - a.length)
+  for (const key of ordered) {
+    if (haystack.includes(key)) return key
+  }
+  return undefined
+}

@@ -16,11 +16,23 @@ export function readTags(file: File): Promise<BasicTags> {
     try {
       jsmediatags.read(file, {
         onSuccess: (tag) => {
+          const raw = tag.tags as {
+            title?: string
+            artist?: string
+            album?: string
+            genre?: string | { data?: string }
+            TCON?: string | { data?: string }
+          }
+          const genreField = raw.genre ?? raw.TCON
+          const genre =
+            typeof genreField === 'string'
+              ? genreField.trim() || undefined
+              : genreField?.data?.trim() || undefined
           resolve({
-            title: tag.tags.title?.trim() || undefined,
-            artist: tag.tags.artist?.trim() || undefined,
-            album: tag.tags.album?.trim() || undefined,
-            genre: tag.tags.genre?.trim() || undefined,
+            title: raw.title?.trim() || undefined,
+            artist: raw.artist?.trim() || undefined,
+            album: raw.album?.trim() || undefined,
+            genre,
           })
         },
         onError: () => resolve({}),

@@ -23,15 +23,15 @@ html {
 }
 
 html[data-theme='rock'] {
-  --bg: #141018;
-  --bg-2: #221a28;
-  --surface: #2c2234;
-  --text: #f2e8ef;
-  --muted: #b5a3b8;
-  --accent: #e86a4f;
-  --accent-contrast: #140f16;
-  --bg-glow-a: #5a2030;
-  --bg-glow-b: #3a2848;
+  --bg: #120c14;
+  --bg-2: #1e1420;
+  --surface: #2a1a30;
+  --text: #f5e8f0;
+  --muted: #c4a8bc;
+  --accent: #ff5c3a;
+  --accent-contrast: #120c14;
+  --bg-glow-a: #6a1830;
+  --bg-glow-b: #4a2058;
 }
 
 html[data-theme='pop'] {
@@ -59,15 +59,15 @@ html[data-theme='jazz'] {
 }
 
 html[data-theme='electronic'] {
-  --bg: #0c1218;
-  --bg-2: #142028;
-  --surface: #1a2a34;
-  --text: #e8f4ff;
-  --muted: #94b8cc;
-  --accent: #4fd4ff;
-  --accent-contrast: #0c1218;
-  --bg-glow-a: #184868;
-  --bg-glow-b: #1a3860;
+  --bg: #060e16;
+  --bg-2: #0e1c28;
+  --surface: #142838;
+  --text: #e4f8ff;
+  --muted: #7ec8e8;
+  --accent: #00e5ff;
+  --accent-contrast: #060e16;
+  --bg-glow-a: #0a4878;
+  --bg-glow-b: #184878;
 }
 
 html[data-theme='classical'] {
@@ -248,6 +248,13 @@ body::before {
   font-size: 0.8rem;
   color: var(--muted);
   line-height: 1.45;
+}
+
+.theme-active {
+  margin: 0.45rem 0 0;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--accent);
 }
 
 .btn {

@@ -12,6 +12,19 @@ export type ThemeId =
   | 'folk'
   | 'soul'
 
+export const THEME_LABELS: Record<ThemeId, string> = {
+  neutral: 'Netral',
+  rock: 'Rock',
+  pop: 'Pop',
+  jazz: 'Jazz',
+  electronic: 'Electronic',
+  classical: 'Klasik',
+  hiphop: 'Hip-hop',
+  metal: 'Metal',
+  folk: 'Folk',
+  soul: 'Soul',
+}
+
 export interface ThemeTokens {
   bg: string
   bg2: string

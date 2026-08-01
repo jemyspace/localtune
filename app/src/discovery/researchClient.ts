@@ -44,7 +44,9 @@ export class ResearchClient {
       topArtists: seed.topArtists.join(','),
       topGenres: seed.topGenres.join(','),
     })
-    const res = await fetch(`/api/research?${params.toString()}`)
+    const url = new URL('/api/research', window.location.origin)
+    url.search = params.toString()
+    const res = await fetch(url)
     if (!res.ok) {
       throw new Error(`Research failed (${res.status})`)
     }

@@ -12,6 +12,7 @@ import { isResearchEnabled, setResearchOptOut } from './settings'
 import { ListenTracker } from './taste/listenTracker'
 import { TasteApi } from './taste/tasteApi'
 import { ThemeController } from './theme/themeController'
+import { THEME_LABELS } from './theme/types'
 import type { Track } from './types'
 import './style.css'
 
@@ -51,7 +52,8 @@ app.innerHTML = `
             Adaptif
           </label>
         </div>
-        <p class="appearance-hint">Adaptif mengikuti genre dari tag lokal & metadata research (bukan AI). Hemat data; reset ke Default saat tab ditutup.</p>
+        <p class="appearance-hint" id="appearance-hint">Adaptif mengikuti genre dari tag lokal & metadata research (bukan AI). Hemat data; reset ke Default saat tab ditutup.</p>
+        <p class="theme-active" id="theme-active" hidden></p>
       </div>
     </header>
 
@@ -151,6 +153,8 @@ const discoveryEmptyEl = $('#discovery-empty')
 const researchEnabledEl = $('#research-enabled') as HTMLInputElement
 const btnRefreshDiscovery = $('#btn-refresh-discovery')
 const uiModeInputs = app.querySelectorAll<HTMLInputElement>('input[name="ui-mode"]')
+const appearanceHintEl = $('#appearance-hint')
+const themeActiveEl = $('#theme-active')
 
 function $(sel: string): HTMLElement {
   return app.querySelector(sel) as HTMLElement
@@ -352,6 +356,21 @@ function renderTaste(): void {
   }
 }
 
+function renderAppearance(): void {
+  const mode = themeController.getMode()
+  const themeId = themeController.getActiveThemeId()
+  const adaptive = mode === 'adaptive'
+
+  themeActiveEl.hidden = !adaptive
+  if (adaptive) {
+    themeActiveEl.textContent = `Tema aktif: ${THEME_LABELS[themeId]}`
+  }
+
+  appearanceHintEl.textContent = adaptive
+    ? 'Warna UI berubah per lagu dari tag lokal, nama file, atau metadata research.'
+    : 'Adaptif mengikuti genre dari tag lokal & metadata research (bukan AI). Hemat data; reset ke Default saat tab ditutup.'
+}
+
 function applyThemeForCurrentTrack(): void {
   themeController.onTrackChange(player.current())
 }
@@ -376,6 +395,7 @@ function renderNow(): void {
   seekEl.max = String(dur || 0)
   renderPlaylist()
   applyThemeForCurrentTrack()
+  renderAppearance()
 }
 
 function tick(): void {
@@ -444,8 +464,12 @@ uiModeInputs.forEach((input) => {
     if (!input.checked) return
     themeController.setMode(input.value === 'adaptive' ? 'adaptive' : 'default')
     applyThemeForCurrentTrack()
+    renderAppearance()
   })
 })
+
+themeController.subscribe(() => renderAppearance())
+renderAppearance()
 
 $('#btn-pick').addEventListener('click', async () => {
   const files = await pickAudioFiles()

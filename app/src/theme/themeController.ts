@@ -6,12 +6,16 @@ import { AmbienceController } from './ambience'
 import { applyTheme, clearAdaptiveTheme } from './themeApplier'
 import { findResearchGenreHint, resolveThemeId } from './themeResolver'
 import { getUiMode, setUiMode } from './uiModeStore'
-import type { UiMode } from './types'
+import type { ThemeId, UiMode } from './types'
+
+type ThemeListener = (themeId: ThemeId, mode: UiMode) => void
 
 export class ThemeController {
   private readonly ambience = new AmbienceController()
   private readonly player: Player
   private readonly discoveryStore: DiscoveryStore
+  private currentThemeId: ThemeId = 'neutral'
+  private readonly listeners = new Set<ThemeListener>()
 
   constructor(player: Player, discoveryStore: DiscoveryStore) {
     this.player = player
@@ -24,6 +28,16 @@ export class ThemeController {
     return getUiMode()
   }
 
+  getActiveThemeId(): ThemeId {
+    return this.currentThemeId
+  }
+
+  subscribe(listener: ThemeListener): () => void {
+    this.listeners.add(listener)
+    listener(this.currentThemeId, this.getMode())
+    return () => this.listeners.delete(listener)
+  }
+
   setMode(mode: UiMode): void {
     setUiMode(mode)
     this.syncMode()
@@ -32,7 +46,7 @@ export class ThemeController {
   onTrackChange(track?: Track): void {
     if (getUiMode() === 'default') return
     if (!track) {
-      clearAdaptiveTheme()
+      this.setTheme('neutral')
       return
     }
     this.applyForTrack(track)
@@ -54,7 +68,9 @@ export class ThemeController {
     const mode = getUiMode()
     if (mode === 'default') {
       clearAdaptiveTheme()
+      this.currentThemeId = 'neutral'
       this.ambience.setEnabled(false)
+      this.notify()
       return
     }
     this.ambience.setEnabled(true)
@@ -64,6 +80,17 @@ export class ThemeController {
   private applyForTrack(track: Track): void {
     const hint = findResearchGenreHint(this.discoveryStore, track)
     const themeId = resolveThemeId(track, hint, isResearchEnabled())
+    this.setTheme(themeId)
+  }
+
+  private setTheme(themeId: ThemeId): void {
+    this.currentThemeId = themeId
     applyTheme(themeId)
+    this.notify()
+  }
+
+  private notify(): void {
+    const mode = getUiMode()
+    for (const l of this.listeners) l(this.currentThemeId, mode)
   }
 }
