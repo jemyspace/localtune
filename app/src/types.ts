@@ -12,6 +12,7 @@ export interface Track {
 }
 
 export interface PlayerListeners {
+  onTrackSelected?: (trackId: string) => void
   onPlayStart?: (trackId: string) => void
   onPause?: (trackId: string, positionSec: number) => void
   onSeek?: (trackId: string, fromSec: number, toSec: number) => void

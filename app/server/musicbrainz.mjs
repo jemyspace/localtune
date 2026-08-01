@@ -1,5 +1,6 @@
 const USER_AGENT = 'LocalTune/0.1 (https://github.com/jemyspace/localtune; contact: jemyspace@users.noreply.github.com)'
 const MB_BASE = 'https://musicbrainz.org/ws/2'
+const RATE_LIMIT_MS = 1100
 
 function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms))
@@ -29,8 +30,12 @@ async function mbGet(path) {
   return res.json()
 }
 
+function recordingArtist(rec, fallback) {
+  return rec['artist-credit']?.[0]?.name ?? rec['artist-credit']?.[0]?.artist?.name ?? fallback
+}
+
 /**
- * Fast path for serverless (Netlify 10s limit): max 2 MusicBrainz calls.
+ * Fast path for serverless (Netlify ~26s limit): max 2 MusicBrainz calls.
  */
 export async function fetchMusicBrainzDiscoveries(seed) {
   const artist = String(seed.artist ?? '').trim()
@@ -49,13 +54,10 @@ export async function fetchMusicBrainzDiscoveries(seed) {
   try {
     if (!artist || norm(artist) === 'unknown') {
       if (!title) return []
-      const q = `recording:"${escLucene(title)}"`
-      const data = await mbGet(`recording?query=${encodeURIComponent(q)}&limit=8&fmt=json`)
+      const data = await mbGet(`recording?query=${encodeURIComponent(`recording:"${escLucene(title)}"`)}&limit=10&fmt=json`)
       for (const rec of data.recordings ?? []) {
-        const recArtist =
-          rec['artist-credit']?.[0]?.name ?? rec['artist-credit']?.[0]?.artist?.name ?? 'Unknown'
         add({
-          artist: recArtist,
+          artist: recordingArtist(rec, 'Unknown'),
           title: rec.title,
           sourceUrl: `https://musicbrainz.org/recording/${rec.id}`,
           reason: 'Judul mirip di MusicBrainz',
@@ -64,44 +66,24 @@ export async function fetchMusicBrainzDiscoveries(seed) {
       return items.slice(0, 12)
     }
 
-    const recordingQuery = title
-      ? `artist:"${escLucene(artist)}" AND recording:"${escLucene(title)}"`
-      : `artist:"${escLucene(artist)}"`
-    const recordingData = await mbGet(
-      `recording?query=${encodeURIComponent(recordingQuery)}&limit=10&fmt=json`,
+    const artistData = await mbGet(
+      `artist?query=${encodeURIComponent(`artist:"${escLucene(artist)}"`)}&limit=1&fmt=json`,
     )
-    for (const rec of recordingData.recordings ?? []) {
-      const recArtist =
-        rec['artist-credit']?.[0]?.name ?? rec['artist-credit']?.[0]?.artist?.name ?? artist
-      const tags = (rec.tags ?? []).slice(0, 2).map((t) => t.name).join(', ')
-      add({
-        artist: recArtist,
-        title: rec.title,
-        genre: tags || undefined,
-        sourceUrl: `https://musicbrainz.org/recording/${rec.id}`,
-        reason: 'Rekaman terkait di MusicBrainz',
-      })
-    }
+    const mbArtist = artistData.artists?.[0]
+    if (!mbArtist?.id) return []
 
-    if (items.length < 8) {
-      await sleep(600)
-      const artistData = await mbGet(
-        `artist?query=${encodeURIComponent(`artist:"${escLucene(artist)}"`)}&limit=1&fmt=json`,
-      )
-      const mbArtist = artistData.artists?.[0]
-      if (mbArtist?.id) {
-        const genreHint = (mbArtist.tags ?? []).slice(0, 2).map((t) => t.name).join(', ')
-        const byArtist = await mbGet(`recording?artist=${mbArtist.id}&limit=10&fmt=json`)
-        for (const rec of byArtist.recordings ?? []) {
-          add({
-            artist: mbArtist.name ?? artist,
-            title: rec.title,
-            genre: genreHint || undefined,
-            sourceUrl: `https://musicbrainz.org/recording/${rec.id}`,
-            reason: `Lainnya dari artis ${mbArtist.name ?? artist}`,
-          })
-        }
-      }
+    const genreHint = (mbArtist.tags ?? []).slice(0, 2).map((t) => t.name).join(', ')
+    await sleep(RATE_LIMIT_MS)
+
+    const byArtist = await mbGet(`recording?artist=${mbArtist.id}&limit=12&fmt=json`)
+    for (const rec of byArtist.recordings ?? []) {
+      add({
+        artist: mbArtist.name ?? artist,
+        title: rec.title,
+        genre: genreHint || undefined,
+        sourceUrl: `https://musicbrainz.org/recording/${rec.id}`,
+        reason: `Lainnya dari artis ${mbArtist.name ?? artist}`,
+      })
     }
   } catch (err) {
     console.error('MusicBrainz research error:', err)

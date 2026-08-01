@@ -70,6 +70,7 @@ export class Player {
 
     this.index = next
     this.audio.src = track.objectUrl
+    this.listeners.onTrackSelected?.(track.id)
     this.onChange?.()
 
     if (autoplay) {

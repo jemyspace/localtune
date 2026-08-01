@@ -31,14 +31,22 @@ const audioIntel = new AudioIntelTrigger(discoveryStore, tasteApi, library)
 const themeController = new ThemeController(player, discoveryStore, audioIntel.getFeaturesStore())
 const listenTracker = new ListenTracker(player, library, tasteApi)
 listenTracker.bindTimeupdate()
-listenTracker.setMeaningfulPlayHandler((track) => {
-  researchTrigger.onMeaningfulPlay(track)
+function kickDiscovery(track: Track | undefined): void {
+  if (!track || track.error) return
+  researchTrigger.onTrackUpdated(track)
   audioIntel.onTrackActivity(track)
-})
+}
+
+function shouldKickEnriched(track: Track): boolean {
+  const current = player.current()
+  if (current?.id === track.id) return true
+  return !current && library.getAll()[0]?.id === track.id
+}
+
 library.onTrackEnriched = (track) => {
+  if (!shouldKickEnriched(track)) return
+  kickDiscovery(track)
   if (player.current()?.id === track.id) {
-    researchTrigger.onTrackUpdated(track)
-    audioIntel.onTrackActivity(track)
     themeController.onDiscoveryUpdate()
   }
 }
@@ -458,6 +466,9 @@ player.onTrackMeta = (_t: Track) => {
   applyThemeForCurrentTrack()
 }
 player.setListeners({
+  onTrackSelected: (id) => {
+    kickDiscovery(library.getById(id))
+  },
   onPlayStart: (id) => {
     trackHandlers.onPlayStart(id)
     themeController.onPlayStart()
@@ -531,8 +542,10 @@ $('#btn-pick').addEventListener('click', async () => {
   renderNow()
   if (!player.current()) {
     await player.playIndex(0, true)
-    renderNow()
+  } else {
+    kickDiscovery(player.current())
   }
+  renderNow()
   // re-render when tags arrive
   setTimeout(() => renderNow(), 400)
   setTimeout(() => renderNow(), 1200)
