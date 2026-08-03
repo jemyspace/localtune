@@ -9,10 +9,12 @@
 
 [functions]
   node_bundler = "esbuild"
+  # Paths are relative to [build].base ("app")
   included_files = ["server/**"]
 
 [functions.research]
   timeout = 26
+  included_files = ["server/musicbrainz.mjs"]
 
 [[redirects]]
   from = "/api/research"

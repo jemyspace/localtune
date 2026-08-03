@@ -33,6 +33,7 @@ const listenTracker = new ListenTracker(player, library, tasteApi)
 listenTracker.bindTimeupdate()
 listenTracker.setMeaningfulPlayHandler((track) => {
   researchTrigger.onMeaningfulPlay(track)
+  audioIntel.onTrackActivity(track)
 })
 function kickDiscovery(track: Track | undefined): void {
   if (!track || track.error) return
@@ -45,7 +46,9 @@ library.onTrackEnriched = (track) => {
   const isCurrent = current?.id === track.id
   const isFirstPending = !current && library.getAll()[0]?.id === track.id
   if (!isCurrent && !isFirstPending) return
-  kickDiscovery(track)
+  // Prefer enriched tags for research; force refresh when artist becomes known.
+  researchTrigger.onTrackUpdated(track)
+  audioIntel.onTrackActivity(track)
   if (isCurrent) {
     themeController.onDiscoveryUpdate()
     renderDiscovery()

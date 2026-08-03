@@ -1,4 +1,5 @@
-const USER_AGENT = 'LocalTune/0.1 (https://github.com/jemyspace/localtune; contact: jemyspace@users.noreply.github.com)'
+const USER_AGENT =
+  'LocalTune/0.1 (https://github.com/jemyspace/localtune; contact: jemyspace@users.noreply.github.com)'
 const MB_BASE = 'https://musicbrainz.org/ws/2'
 const RATE_LIMIT_MS = 1100
 const MAX_API_CALLS = 2
@@ -32,13 +33,30 @@ async function mbGet(path) {
 }
 
 function recordingArtist(rec, fallback) {
-  return rec['artist-credit']?.[0]?.name ?? rec['artist-credit']?.[0]?.artist?.name ?? fallback
+  return (
+    rec['artist-credit']?.[0]?.name ??
+    rec['artist-credit']?.[0]?.artist?.name ??
+    fallback
+  )
+}
+
+/** Drop bootleg chatter / found-sound / empty noise that browse mode returns first. */
+function isUsefulTitle(title) {
+  const t = String(title ?? '').trim()
+  if (!t || t.length < 2) return false
+  if (t.length > 80) return false
+  const n = norm(t)
+  if (/^\(.*\)$/.test(t)) return false
+  if (n.includes('found sound')) return false
+  if (n.includes('chris chat')) return false
+  if (n.includes('encore break')) return false
+  if (n === 'intro' || n === 'outro' || n === 'interlude') return false
+  return true
 }
 
 /**
  * Fast path for serverless (Netlify ~26s limit): max 2 MusicBrainz calls.
- * Call 1: artist lookup (or title search when artist unknown).
- * Call 2: browse recordings by artist MBID (or title search fallback).
+ * Prefer Lucene search (score-ranked) over browse (alphabetical junk).
  */
 export async function fetchMusicBrainzDiscoveries(seed) {
   const artist = String(seed.artist ?? '').trim()
@@ -54,6 +72,7 @@ export async function fetchMusicBrainzDiscoveries(seed) {
     norm(entryArtist) === norm(artist) && norm(entryTitle ?? '') === norm(title)
 
   const add = (entry) => {
+    if (!isUsefulTitle(entry.title)) return
     const key = `${norm(entry.artist)}|${norm(entry.title ?? '')}`
     if (!entry.artist || seen.has(key)) return
     if (isCurrentTrack(entry.artist, entry.title)) return
@@ -68,74 +87,76 @@ export async function fetchMusicBrainzDiscoveries(seed) {
     return mbGet(path)
   }
 
-  const browseArtist = async (mbid, label, genreHint, reason) => {
-    const data = await callMb(`recording?artist=${mbid}&limit=15&fmt=json`)
-    for (const rec of data?.recordings ?? []) {
+  const addFromRecordings = (recordings, fallbackArtist, reason, genre) => {
+    for (const rec of recordings ?? []) {
       add({
-        artist: label,
+        artist: recordingArtist(rec, fallbackArtist),
         title: rec.title,
-        genre: genreHint || undefined,
+        genre: genre || undefined,
         sourceUrl: `https://musicbrainz.org/recording/${rec.id}`,
         reason,
       })
     }
   }
 
-  const searchByTitle = async () => {
-    if (!title || apiCalls >= MAX_API_CALLS) return
+  const searchRecordings = async (query, limit = 15) => {
     const data = await callMb(
-      `recording?query=${encodeURIComponent(`recording:"${escLucene(title)}"`)}&limit=12&fmt=json`,
+      `recording?query=${encodeURIComponent(query)}&limit=${limit}&fmt=json`,
     )
-    for (const rec of data?.recordings ?? []) {
-      add({
-        artist: recordingArtist(rec, 'Unknown'),
-        title: rec.title,
-        sourceUrl: `https://musicbrainz.org/recording/${rec.id}`,
-        reason: 'Judul mirip di MusicBrainz',
-      })
-    }
+    return data?.recordings ?? []
   }
 
   try {
     const hasArtist = Boolean(artist) && norm(artist) !== 'unknown'
     const hasTitle = Boolean(title)
 
+    // 1) Other tracks by the same artist (search is score-ranked, not A–Z browse).
     if (hasArtist) {
-      const artistData = await callMb(
-        `artist?query=${encodeURIComponent(`artist:"${escLucene(artist)}"`)}&limit=1&fmt=json`,
-      )
-      const mbArtist = artistData?.artists?.[0]
-      if (mbArtist?.id) {
-        const genreHint = (mbArtist.tags ?? []).slice(0, 2).map((t) => t.name).join(', ')
-        await browseArtist(
-          mbArtist.id,
-          mbArtist.name ?? artist,
-          genreHint,
-          `Lainnya dari artis ${mbArtist.name ?? artist}`,
-        )
-        if (items.length > 0) return items.slice(0, 15)
+      let query = `artist:"${escLucene(artist)}"`
+      if (hasTitle) {
+        query += ` AND NOT recording:"${escLucene(title)}"`
       }
-    }
+      const recs = await searchRecordings(query, 15)
+      addFromRecordings(recs, artist, `Lainnya dari artis ${artist}`)
 
-    if (hasTitle) {
-      await searchByTitle()
+      // 2) Related: recordings sharing tags/genre via a second title-or-artist query.
+      if (items.length < 6 && hasTitle && apiCalls < MAX_API_CALLS) {
+        const similar = await searchRecordings(
+          `recording:"${escLucene(title)}" AND NOT artist:"${escLucene(artist)}"`,
+          10,
+        )
+        addFromRecordings(similar, 'Unknown', 'Artis lain dengan judul mirip')
+      }
+
       if (items.length > 0) return items.slice(0, 15)
     }
 
+    // 3) Title-only (unknown / unmatched artist).
+    if (hasTitle && apiCalls < MAX_API_CALLS) {
+      const recs = await searchRecordings(`recording:"${escLucene(title)}"`, 12)
+      addFromRecordings(recs, 'Unknown', 'Judul mirip di MusicBrainz')
+
+      const hitArtist = recs[0] ? recordingArtist(recs[0], '') : ''
+      if (hitArtist && norm(hitArtist) !== 'unknown' && apiCalls < MAX_API_CALLS) {
+        const more = await searchRecordings(
+          `artist:"${escLucene(hitArtist)}" AND NOT recording:"${escLucene(title)}"`,
+          12,
+        )
+        addFromRecordings(more, hitArtist, `Lainnya dari artis ${hitArtist}`)
+      }
+
+      if (items.length > 0) return items.slice(0, 15)
+    }
+
+    // 4) Taste-profile fallback.
     for (const topArtist of topArtists) {
       if (norm(topArtist) === norm(artist)) continue
       if (apiCalls >= MAX_API_CALLS) break
-      const artistData = await callMb(
-        `artist?query=${encodeURIComponent(`artist:"${escLucene(topArtist)}"`)}&limit=1&fmt=json`,
-      )
-      const mbArtist = artistData?.artists?.[0]
-      if (!mbArtist?.id) continue
-      const genreHint = (mbArtist.tags ?? []).slice(0, 2).map((t) => t.name).join(', ')
-      await browseArtist(
-        mbArtist.id,
-        mbArtist.name ?? topArtist,
-        genreHint,
-        `Berdasarkan selera Anda (${mbArtist.name ?? topArtist})`,
+      const recs = await searchRecordings(`artist:"${escLucene(topArtist)}"`, 12)
+      addFromRecordings(
+        recs,
+        topArtist,
+        `Berdasarkan selera Anda (${topArtist})`,
       )
       if (items.length > 0) break
     }
@@ -160,7 +181,12 @@ export async function handleResearchRequest(req, res) {
     .map((s) => s.trim())
     .filter(Boolean)
 
-  const items = await fetchMusicBrainzDiscoveries({ artist, title, topArtists, topGenres })
+  const items = await fetchMusicBrainzDiscoveries({
+    artist,
+    title,
+    topArtists,
+    topGenres,
+  })
   res.setHeader('Content-Type', 'application/json')
   res.setHeader('Cache-Control', 'private, max-age=300')
   res.statusCode = 200

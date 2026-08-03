@@ -20,19 +20,33 @@ export class ResearchClient {
       if (hit && hit.data.length > 0 && Date.now() - hit.at < CACHE_TTL_MS) {
         return hit.data
       }
-      const pending = this.inflight.get(key)
-      if (pending) return pending
+    }
+
+    const pending = this.inflight.get(key)
+    if (pending && !bypassCache) return pending
+
+    // If bypassing while a request is in flight, wait for it first — then refetch only if empty.
+    if (pending && bypassCache) {
+      const waited = await pending
+      if (waited.length > 0) {
+        this.cache.set(key, { at: Date.now(), data: waited })
+        return waited
+      }
     }
 
     const promise = this.doFetch(seed)
       .then((data) => {
         if (data.length > 0) {
           this.cache.set(key, { at: Date.now(), data })
+        } else {
+          this.cache.delete(key)
         }
         return data
       })
       .finally(() => {
-        this.inflight.delete(key)
+        if (this.inflight.get(key) === promise) {
+          this.inflight.delete(key)
+        }
       })
 
     this.inflight.set(key, promise)
@@ -53,6 +67,6 @@ export class ResearchClient {
       throw new Error(`Research failed (${res.status})`)
     }
     const body = (await res.json()) as { items?: RawDiscovery[] }
-    return body.items ?? []
+    return Array.isArray(body.items) ? body.items : []
   }
 }
