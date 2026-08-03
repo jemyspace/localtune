@@ -31,6 +31,9 @@ const audioIntel = new AudioIntelTrigger(discoveryStore, tasteApi, library)
 const themeController = new ThemeController(player, discoveryStore, audioIntel.getFeaturesStore())
 const listenTracker = new ListenTracker(player, library, tasteApi)
 listenTracker.bindTimeupdate()
+listenTracker.setMeaningfulPlayHandler((track) => {
+  researchTrigger.onMeaningfulPlay(track)
+})
 function kickDiscovery(track: Track | undefined): void {
   if (!track || track.error) return
   researchTrigger.onTrackUpdated(track)

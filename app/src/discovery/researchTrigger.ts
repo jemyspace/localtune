@@ -49,11 +49,15 @@ export class ResearchTrigger {
 
   /** Re-run when ID3 tags arrive (artist/title often better than filename). */
   onTrackUpdated(track: Track): void {
-    const wasWeak =
-      this.lastSeed != null && normalizeLabel(this.lastSeed.artist) === 'unknown'
-    const nowStrong = normalizeLabel(track.artist) !== 'unknown'
-    const bypass = wasWeak && nowStrong
-    this.requestResearch(track, bypass)
+    const prev = this.lastSeed
+    const seed = buildSeed(track, buildProfile(this.tasteApi))
+    const metadataChanged =
+      prev != null &&
+      (normalizeLabel(prev.artist) !== normalizeLabel(seed.artist) ||
+        normalizeLabel(prev.title) !== normalizeLabel(seed.title))
+    const wasWeak = prev != null && normalizeLabel(prev.artist) === 'unknown'
+    const nowStrong = normalizeLabel(seed.artist) !== 'unknown'
+    this.requestResearch(track, metadataChanged || (wasWeak && nowStrong))
   }
 
   forceRefreshCurrent(track?: Track): void {
