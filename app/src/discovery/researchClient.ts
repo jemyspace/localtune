@@ -17,7 +17,7 @@ export class ResearchClient {
 
     if (!bypassCache) {
       const hit = this.cache.get(key)
-      if (hit && Date.now() - hit.at < CACHE_TTL_MS) {
+      if (hit && hit.data.length > 0 && Date.now() - hit.at < CACHE_TTL_MS) {
         return hit.data
       }
       const pending = this.inflight.get(key)
@@ -26,7 +26,9 @@ export class ResearchClient {
 
     const promise = this.doFetch(seed)
       .then((data) => {
-        this.cache.set(key, { at: Date.now(), data })
+        if (data.length > 0) {
+          this.cache.set(key, { at: Date.now(), data })
+        }
         return data
       })
       .finally(() => {

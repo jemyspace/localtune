@@ -40,17 +40,15 @@ function kickDiscovery(track: Track | undefined): void {
   audioIntel.onTrackActivity(track)
 }
 
-function shouldKickEnriched(track: Track): boolean {
-  const current = player.current()
-  if (current?.id === track.id) return true
-  return !current && library.getAll()[0]?.id === track.id
-}
-
 library.onTrackEnriched = (track) => {
-  if (!shouldKickEnriched(track)) return
+  const current = player.current()
+  const isCurrent = current?.id === track.id
+  const isFirstPending = !current && library.getAll()[0]?.id === track.id
+  if (!isCurrent && !isFirstPending) return
   kickDiscovery(track)
-  if (player.current()?.id === track.id) {
+  if (isCurrent) {
     themeController.onDiscoveryUpdate()
+    renderDiscovery()
   }
 }
 const trackHandlers = listenTracker.handlers()

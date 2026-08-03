@@ -15,6 +15,7 @@ export class ResearchTrigger {
   private status: ResearchStatus = 'idle'
   private lastSeed: ResearchSeed | null = null
   private lastSeedKey = ''
+  private runGeneration = 0
   private readonly statusListeners = new Set<StatusListener>()
   private readonly client: ResearchClient
   private readonly store: DiscoveryStore
@@ -89,14 +90,26 @@ export class ResearchTrigger {
   }
 
   private async run(seed: ResearchSeed, bypassCache: boolean): Promise<void> {
+    const generation = ++this.runGeneration
     this.setStatus('updating')
     try {
-      const items = await this.client.fetch(seed, bypassCache)
-      this.store.mergeRaw(items, this.library)
-      this.store.notify()
+      let items = await this.client.fetch(seed, bypassCache)
+      if (generation !== this.runGeneration) return
+
+      if (items.length === 0 && !bypassCache) {
+        items = await this.client.fetch(seed, true)
+        if (generation !== this.runGeneration) return
+      }
+
+      if (items.length > 0) {
+        this.store.mergeRaw(items, this.library)
+        this.store.notify()
+      }
       this.setStatus('idle')
     } catch {
-      this.setStatus('error')
+      if (generation === this.runGeneration) {
+        this.setStatus('error')
+      }
     }
   }
 }

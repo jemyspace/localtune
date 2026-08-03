@@ -9,7 +9,7 @@
 
 [functions]
   node_bundler = "esbuild"
-  included_files = ["app/server/**"]
+  included_files = ["server/**"]
 
 [functions.research]
   timeout = 26
