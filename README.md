@@ -1,4 +1,4 @@
-# Cursorworkshop — LocalTune
+# LocalTune
 
 Pemutar musik web **lokal** dengan profil selera, Up Next, discovery metadata, dan UI adaptif — tanpa unggah audio ke server.
 
