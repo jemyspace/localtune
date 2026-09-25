@@ -41,6 +41,6 @@ export function coverArtHtml(
   const hue = h % 360
   const hue2 = (hue + 40 + ((h >> 9) % 80)) % 360
   const angle = (h >> 3) % 360
-  const style = `--c1:hsl(${hue} 70% 55%);--c2:hsl(${hue2} 65% 32%);--ang:${angle}deg`
+  const style = `--c1:hsl(${hue} 38% 52%);--c2:hsl(${hue2} 32% 34%);--ang:${angle}deg`
   return `<span class="${className} gen" style="${style}" aria-hidden="true">${initials(seed)}</span>`
 }

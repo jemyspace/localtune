@@ -31,13 +31,13 @@ const SCENE_FOR_THEME: Record<ThemeId, SceneKind> = {
 
 export const SCENE_LABELS: Record<SceneKind, string> = {
   orbs: 'Cahaya lembut',
-  grid: 'Grid neon',
+  grid: 'Garis perspektif',
   sparks: 'Percikan api',
   bubbles: 'Gelembung',
-  smoke: 'Asap panggung',
+  smoke: 'Kabut lembut',
   ribbons: 'Alunan pita',
   fireflies: 'Kunang-kunang',
-  rings: 'Dentum speaker',
+  rings: 'Gelombang speaker',
 }
 
 export function sceneForTheme(themeId: ThemeId): SceneKind {
@@ -62,12 +62,42 @@ type Rgb = [number, number, number]
 
 const MAX_PARTICLES = 160
 
-function hexToRgb(value: string, fallback: Rgb): Rgb {
-  const hex = value.trim().replace('#', '')
-  const full = hex.length === 3 ? hex.split('').map((c) => c + c).join('') : hex
-  if (!/^[0-9a-f]{6}$/i.test(full)) return fallback
-  const n = parseInt(full, 16)
-  return [(n >> 16) & 255, (n >> 8) & 255, n & 255]
+let probeEl: HTMLSpanElement | null = null
+let probeCtx: CanvasRenderingContext2D | null = null
+
+/**
+ * Ubah token warna CSS (bisa berupa var() + color-mix()) menjadi RGB.
+ * Browser menghitung warnanya lewat elemen probe, lalu canvas 1×1
+ * menormalkan format apa pun (oklab, color(), rgb) ke byte RGB.
+ */
+function resolveCssColor(varName: string, fallback: Rgb): Rgb {
+  try {
+    if (!probeEl) {
+      probeEl = document.createElement('span')
+      probeEl.style.display = 'none'
+      document.body.appendChild(probeEl)
+    }
+    if (!probeCtx) {
+      const c = document.createElement('canvas')
+      c.width = c.height = 1
+      probeCtx = c.getContext('2d', { willReadFrequently: true })
+    }
+    if (!probeCtx) return fallback
+    probeEl.style.color = `var(${varName})`
+    const computed = getComputedStyle(probeEl).color
+    probeCtx.clearRect(0, 0, 1, 1)
+    probeCtx.fillStyle = `rgb(${fallback.join(',')})`
+    probeCtx.fillStyle = computed
+    probeCtx.fillRect(0, 0, 1, 1)
+    const [r, g, b] = probeCtx.getImageData(0, 0, 1, 1).data
+    return [r ?? fallback[0], g ?? fallback[1], b ?? fallback[2]]
+  } catch {
+    return fallback
+  }
+}
+
+function luminance([r, g, b]: Rgb): number {
+  return (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255
 }
 
 function rgba([r, g, b]: Rgb, a: number): string {
@@ -94,12 +124,16 @@ export class RhythmScene {
   private h = 0
   private dpr = 1
   private opacity = 0
+  private lightBackground = true
 
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas
     this.ctx = canvas.getContext('2d')!
     this.resize()
     window.addEventListener('resize', () => this.resize())
+    window
+      .matchMedia('(prefers-color-scheme: dark)')
+      .addEventListener('change', () => this.readPalette())
   }
 
   getKind(): SceneKind {
@@ -135,12 +169,14 @@ export class RhythmScene {
   }
 
   private readPalette(): void {
-    const css = getComputedStyle(document.documentElement)
     this.palette = [
-      hexToRgb(css.getPropertyValue('--accent'), this.palette[0]!),
-      hexToRgb(css.getPropertyValue('--bg-glow-a'), this.palette[1]!),
-      hexToRgb(css.getPropertyValue('--bg-glow-b'), this.palette[2]!),
+      resolveCssColor('--accent', this.palette[0]!),
+      resolveCssColor('--bg-glow-b', this.palette[1]!),
+      resolveCssColor('--accent-soft', this.palette[2]!),
     ]
+    // Latar terang: warna "menyerap" seperti tinta di kertas (multiply).
+    // Latar gelap: warna "bercahaya" (lighter).
+    this.lightBackground = luminance(resolveCssColor('--bg', [247, 243, 236])) > 0.5
   }
 
   private resize(): void {
@@ -165,8 +201,8 @@ export class RhythmScene {
     ctx.clearRect(0, 0, this.w, this.h)
     if (this.opacity > 0.01) {
       ctx.save()
-      ctx.globalAlpha = this.opacity
-      ctx.globalCompositeOperation = 'lighter'
+      ctx.globalAlpha = this.opacity * (this.lightBackground ? 0.7 : 0.85)
+      ctx.globalCompositeOperation = this.lightBackground ? 'multiply' : 'lighter'
       this.draw(dt)
       ctx.restore()
     }

@@ -1,135 +1,115 @@
+/* =========================================================
+   Token warna
+   Setiap tema genre hanya menentukan warna aksen (--accent-base),
+   rona latar (--tint), dan warna teks di atas aksen (--on-accent).
+   Versi terang/gelap diturunkan otomatis di bawah.
+   ========================================================= */
+
 :root,
 html[data-theme='neutral'] {
-  --bg: #1a1410;
-  --bg-2: #2a2118;
-  --surface: #31261c;
-  --text: #f3ebe1;
-  --muted: #b9a894;
-  --accent: #e8a054;
-  --accent-contrast: #1a1410;
-  --line: rgba(243, 235, 225, 0.12);
-  --danger: #e07a6a;
-  --bg-glow-a: #4a3420;
-  --bg-glow-b: #2c3d45;
-  --ambience: 0;
-  --font-display: 'Big Shoulders Display', 'Arial Narrow', sans-serif;
-  --font-serif: 'Instrument Serif', Georgia, serif;
-  --font-mono: 'JetBrains Mono', ui-monospace, monospace;
-  --font-body: 'DM Sans', sans-serif;
+  --accent-base: #b4552d; /* terakota */
+  --tint: #ead9c3;
+  --on-accent: #ffffff;
 }
 
+html[data-theme='rock'] {
+  --accent-base: #a3302a; /* bata */
+  --tint: #ecd3cd;
+  --on-accent: #ffffff;
+}
+
+html[data-theme='pop'] {
+  --accent-base: #c93f73; /* raspberi */
+  --tint: #f4d8e2;
+  --on-accent: #ffffff;
+}
+
+html[data-theme='jazz'] {
+  --accent-base: #93621a; /* kuningan */
+  --tint: #ecdfc3;
+  --on-accent: #ffffff;
+}
+
+html[data-theme='electronic'] {
+  --accent-base: #0d7080; /* teal */
+  --tint: #cfe4e5;
+  --on-accent: #ffffff;
+}
+
+html[data-theme='classical'] {
+  --accent-base: #3e5c82; /* biru senja */
+  --tint: #d9dfe8;
+  --on-accent: #ffffff;
+}
+
+html[data-theme='hiphop'] {
+  --accent-base: #7b416f; /* plum */
+  --tint: #e9d8e4;
+  --on-accent: #ffffff;
+}
+
+html[data-theme='metal'] {
+  --accent-base: #45434a; /* grafit */
+  --tint: #dcdadd;
+  --on-accent: #ffffff;
+}
+
+html[data-theme='folk'] {
+  --accent-base: #56782d; /* lumut */
+  --tint: #e0e7cf;
+  --on-accent: #ffffff;
+}
+
+html[data-theme='soul'] {
+  --accent-base: #a4442f; /* karat */
+  --tint: #f0d9c9;
+  --on-accent: #ffffff;
+}
+
+/* Mode terang (bawaan): kertas hangat + tinta cokelat tua */
 html {
+  color-scheme: light;
+  --paper: #f7f3ec;
+  --bg: color-mix(in oklab, var(--tint) 32%, var(--paper));
+  --bg-2: color-mix(in oklab, var(--tint) 14%, var(--paper));
+  --surface: #fffdf9;
+  --text: #24211d;
+  --muted: #6c655b;
+  --line: rgb(36 33 29 / 0.12);
+  --shadow: 0 1px 2px rgb(36 33 29 / 0.05), 0 8px 24px rgb(36 33 29 / 0.06);
+  --accent: var(--accent-base);
+  --accent-contrast: var(--on-accent);
+  --accent-text: color-mix(in oklab, var(--accent) 82%, var(--text));
+  --accent-soft: color-mix(in oklab, var(--accent) 12%, var(--surface));
+  --danger: #b3261e;
+  --bg-glow-a: var(--tint);
+  --bg-glow-b: color-mix(in oklab, var(--accent) 35%, var(--tint));
+  --ambience: 0;
+  --font-display: 'Fira Sans', 'Segoe UI', sans-serif;
+  --font-body: 'Fira Sans', 'Segoe UI', sans-serif;
   transition:
     background-color 0.4s ease,
     color 0.4s ease;
 }
 
-html[data-theme='rock'] {
-  --bg: #120c14;
-  --bg-2: #1e1420;
-  --surface: #2a1a30;
-  --text: #f5e8f0;
-  --muted: #c4a8bc;
-  --accent: #ff5c3a;
-  --accent-contrast: #120c14;
-  --bg-glow-a: #6a1830;
-  --bg-glow-b: #4a2058;
-}
-
-html[data-theme='pop'] {
-  --bg: #12131f;
-  --bg-2: #1c1e30;
-  --surface: #252842;
-  --text: #f4f0ff;
-  --muted: #b8b2d4;
-  --accent: #ff6eb4;
-  --accent-contrast: #12131f;
-  --bg-glow-a: #4a2868;
-  --bg-glow-b: #283878;
-}
-
-html[data-theme='jazz'] {
-  --bg: #18130f;
-  --bg-2: #2a2218;
-  --surface: #352c22;
-  --text: #f6efe4;
-  --muted: #c4b39a;
-  --accent: #d4a05a;
-  --accent-contrast: #18130f;
-  --bg-glow-a: #4a3820;
-  --bg-glow-b: #3a3028;
-}
-
-html[data-theme='electronic'] {
-  --bg: #060e16;
-  --bg-2: #0e1c28;
-  --surface: #142838;
-  --text: #e4f8ff;
-  --muted: #7ec8e8;
-  --accent: #00e5ff;
-  --accent-contrast: #060e16;
-  --bg-glow-a: #0a4878;
-  --bg-glow-b: #184878;
-}
-
-html[data-theme='classical'] {
-  --bg: #1a1a1c;
-  --bg-2: #262628;
-  --surface: #303032;
-  --text: #f5f3ef;
-  --muted: #c8c4bc;
-  --accent: #c9b896;
-  --accent-contrast: #1a1a1c;
-  --bg-glow-a: #3a3830;
-  --bg-glow-b: #2a2e34;
-}
-
-html[data-theme='hiphop'] {
-  --bg: #100e14;
-  --bg-2: #1c1824;
-  --surface: #282234;
-  --text: #f0ecf8;
-  --muted: #b0a4c8;
-  --accent: #f0c040;
-  --accent-contrast: #100e14;
-  --bg-glow-a: #3a2860;
-  --bg-glow-b: #282038;
-}
-
-html[data-theme='metal'] {
-  --bg: #0e0e10;
-  --bg-2: #18181c;
-  --surface: #222228;
-  --text: #ececf0;
-  --muted: #a0a0ac;
-  --accent: #e03030;
-  --accent-contrast: #0e0e10;
-  --bg-glow-a: #301818;
-  --bg-glow-b: #202028;
-}
-
-html[data-theme='folk'] {
-  --bg: #141810;
-  --bg-2: #202818;
-  --surface: #2a3422;
-  --text: #eef2e8;
-  --muted: #b0c0a4;
-  --accent: #8cb85c;
-  --accent-contrast: #141810;
-  --bg-glow-a: #304020;
-  --bg-glow-b: #283828;
-}
-
-html[data-theme='soul'] {
-  --bg: #18100e;
-  --bg-2: #281c18;
-  --surface: #342620;
-  --text: #f8efe8;
-  --muted: #c8b0a0;
-  --accent: #e87840;
-  --accent-contrast: #18100e;
-  --bg-glow-a: #502818;
-  --bg-glow-b: #382820;
+/* Mode gelap mengikuti pengaturan perangkat: hangat, bukan neon */
+@media (prefers-color-scheme: dark) {
+  html {
+    color-scheme: dark;
+    --paper: #171512;
+    --bg: color-mix(in oklab, var(--tint) 7%, var(--paper));
+    --bg-2: color-mix(in oklab, var(--tint) 3%, var(--paper));
+    --surface: #211e1a;
+    --text: #efe9e0;
+    --muted: #a39a8e;
+    --line: rgb(239 233 224 / 0.12);
+    --shadow: 0 1px 2px rgb(0 0 0 / 0.3), 0 8px 24px rgb(0 0 0 / 0.25);
+    --accent: color-mix(in oklab, var(--accent-base) 68%, #ffffff);
+    --accent-contrast: #1b1814;
+    --accent-text: var(--accent);
+    --accent-soft: color-mix(in oklab, var(--accent) 16%, var(--surface));
+    --danger: #f08a7e;
+  }
 }
 
 /* =========================================================
@@ -155,36 +135,25 @@ body {
 
 body {
   font-family: var(--font-body);
+  font-size: 1rem;
+  line-height: 1.5;
   color: var(--text);
-  background:
-    radial-gradient(1200px 700px at 8% -10%, var(--bg-glow-a) 0%, transparent 55%),
-    radial-gradient(900px 600px at 100% 0%, var(--bg-glow-b) 0%, transparent 50%),
-    linear-gradient(165deg, var(--bg), var(--bg-2));
+  background: linear-gradient(180deg, var(--bg), var(--bg-2) 70%);
   background-attachment: fixed;
   transition: background 0.45s ease, color 0.35s ease;
   -webkit-font-smoothing: antialiased;
 }
 
+/* Denyut warna tema yang sangat halus saat lagu diputar. */
 body::before {
   content: '';
   position: fixed;
   inset: 0;
   pointer-events: none;
   z-index: 0;
-  opacity: var(--ambience, 0);
-  background: radial-gradient(circle at 30% 25%, color-mix(in srgb, var(--accent) 55%, transparent), transparent 60%);
-  transition: opacity 0.12s ease;
-}
-
-/* Tekstur grain halus seperti cetakan sampul album. */
-.grain {
-  position: fixed;
-  inset: 0;
-  z-index: 2;
-  pointer-events: none;
-  opacity: 0.07;
-  mix-blend-mode: overlay;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  opacity: calc(var(--ambience, 0) * 1.6);
+  background: radial-gradient(60% 50% at 25% 20%, var(--bg-glow-b), transparent 70%);
+  transition: opacity 0.2s ease;
 }
 
 #app {
@@ -310,21 +279,16 @@ body.is-playing .logo-mark i:nth-child(4) { animation-delay: -0.15s; }
 
 .logo-word {
   font-family: var(--font-display);
-  font-weight: 800;
-  font-size: 1.7rem;
-  letter-spacing: 0.01em;
-  text-transform: uppercase;
+  font-weight: 700;
+  font-size: 1.3rem;
+  letter-spacing: -0.01em;
   line-height: 1;
 }
 
 .logo-word em {
-  font-family: var(--font-serif);
-  font-style: italic;
+  font-style: normal;
   font-weight: 400;
-  text-transform: none;
-  color: var(--accent);
-  font-size: 1.1em;
-  margin-left: 0.05em;
+  color: var(--accent-text);
 }
 
 .topbar-actions {
@@ -338,7 +302,7 @@ body.is-playing .logo-mark i:nth-child(4) { animation-delay: -0.15s; }
   padding: 3px;
   border: 1px solid var(--line);
   border-radius: 999px;
-  background: color-mix(in srgb, var(--surface) 70%, transparent);
+  background: var(--surface);
 }
 
 .segmented input {
@@ -377,40 +341,37 @@ body.is-playing .logo-mark i:nth-child(4) { animation-delay: -0.15s; }
 }
 
 .kicker {
-  margin: 0 0 1.4rem;
-  font-family: var(--font-mono);
-  font-size: 0.78rem;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  color: var(--accent);
+  display: inline-block;
+  margin: 0 0 1.5rem;
+  padding: 0.3rem 0.8rem;
+  border-radius: 999px;
+  background: var(--accent-soft);
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--accent-text);
 }
 
 .landing-title {
   margin: 0;
+  max-width: 16ch;
   font-family: var(--font-display);
-  font-weight: 900;
-  font-size: clamp(3.6rem, 12vw, 9.5rem);
-  line-height: 0.86;
-  letter-spacing: -0.01em;
-  text-transform: uppercase;
+  font-weight: 700;
+  font-size: clamp(2.6rem, 6.5vw, 5.2rem);
+  line-height: 1.04;
+  letter-spacing: -0.025em;
 }
 
 .landing-title em {
-  display: inline-block;
-  font-family: var(--font-serif);
+  font-style: normal;
   font-weight: 400;
-  font-style: italic;
-  text-transform: none;
-  letter-spacing: -0.02em;
-  font-size: 0.78em;
-  color: var(--accent);
+  color: var(--accent-text);
 }
 
 .landing-sub {
-  max-width: 40rem;
-  margin: 1.8rem 0 2rem;
-  font-size: clamp(1rem, 1.6vw, 1.18rem);
-  line-height: 1.6;
+  max-width: 36rem;
+  margin: 1.5rem 0 2rem;
+  font-size: clamp(1.05rem, 1.6vw, 1.2rem);
+  line-height: 1.65;
   color: var(--muted);
 }
 
@@ -422,9 +383,7 @@ body.is-playing .logo-mark i:nth-child(4) { animation-delay: -0.15s; }
 }
 
 .drop-hint {
-  font-family: var(--font-serif);
-  font-style: italic;
-  font-size: 1.15rem;
+  font-size: 0.95rem;
   color: var(--muted);
 }
 
@@ -439,24 +398,32 @@ body.is-playing .logo-mark i:nth-child(4) { animation-delay: -0.15s; }
 
 .features li {
   display: grid;
-  gap: 0.4rem;
-  padding-top: 1rem;
-  border-top: 1px solid var(--line);
+  gap: 0.35rem;
+  padding: 1.2rem 1.25rem 1.3rem;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: var(--surface);
+  box-shadow: var(--shadow);
 }
 
 .features b {
-  font-family: var(--font-mono);
-  font-size: 0.75rem;
+  display: grid;
+  place-items: center;
+  width: 2rem;
+  height: 2rem;
+  margin-bottom: 0.35rem;
+  border-radius: 50%;
+  background: var(--accent-soft);
+  font-size: 0.85rem;
   font-weight: 600;
-  color: var(--accent);
+  color: var(--accent-text);
 }
 
 .features strong {
   font-family: var(--font-display);
-  font-weight: 800;
-  font-size: 1.45rem;
-  text-transform: uppercase;
-  letter-spacing: 0.01em;
+  font-weight: 600;
+  font-size: 1.15rem;
+  letter-spacing: -0.01em;
 }
 
 .features span {
@@ -494,13 +461,12 @@ body.dragging::after {
   place-items: center;
   border: 2px dashed var(--accent);
   border-radius: 24px;
-  background: color-mix(in srgb, var(--bg) 82%, transparent);
-  backdrop-filter: blur(6px);
+  background: color-mix(in srgb, var(--bg) 90%, transparent);
   font-family: var(--font-display);
-  font-weight: 800;
-  font-size: clamp(1.8rem, 5vw, 3.2rem);
-  text-transform: uppercase;
-  color: var(--accent);
+  font-weight: 600;
+  font-size: clamp(1.4rem, 3.5vw, 2.2rem);
+  letter-spacing: -0.01em;
+  color: var(--accent-text);
   pointer-events: none;
 }
 
@@ -513,9 +479,12 @@ body.dragging::after {
   grid-template-columns: auto 1fr;
   align-items: center;
   gap: clamp(1.5rem, 4vw, 3.5rem);
-  padding: clamp(1rem, 4vh, 2.5rem) 0 clamp(2rem, 5vh, 3rem);
-  margin-bottom: 2rem;
-  border-bottom: 1px solid var(--line);
+  padding: clamp(1.5rem, 4vw, 2.5rem);
+  margin: 0.5rem 0 1.5rem;
+  border: 1px solid var(--line);
+  border-radius: 24px;
+  background: var(--surface);
+  box-shadow: var(--shadow);
 }
 
 .now-info {
@@ -525,12 +494,10 @@ body.dragging::after {
 .now-label {
   display: flex;
   align-items: center;
-  gap: 0.55rem;
-  margin: 0 0 0.9rem;
-  font-family: var(--font-mono);
-  font-size: 0.75rem;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
+  gap: 0.5rem;
+  margin: 0 0 0.75rem;
+  font-size: 0.9rem;
+  font-weight: 500;
   color: var(--muted);
 }
 
@@ -556,21 +523,19 @@ body.dragging::after {
 .now-title {
   margin: 0;
   font-family: var(--font-display);
-  font-weight: 900;
-  font-size: clamp(2.7rem, 7.5vw, 6.2rem);
-  line-height: 0.88;
-  letter-spacing: -0.005em;
-  text-transform: uppercase;
+  font-weight: 700;
+  font-size: clamp(2rem, 4.6vw, 3.6rem);
+  line-height: 1.08;
+  letter-spacing: -0.025em;
   overflow-wrap: anywhere;
-  text-shadow: 0 0 calc(var(--beat, 0) * 24px) color-mix(in srgb, var(--accent) 70%, transparent);
+  text-wrap: balance;
 }
 
 .now-artist {
-  margin: 0.55rem 0 0;
-  font-family: var(--font-serif);
-  font-style: italic;
-  font-size: clamp(1.4rem, 2.6vw, 2rem);
-  color: var(--accent);
+  margin: 0.4rem 0 0;
+  font-size: clamp(1.1rem, 2vw, 1.35rem);
+  font-weight: 500;
+  color: var(--accent-text);
 }
 
 .now.swap .now-title,
@@ -590,10 +555,8 @@ body.dragging::after {
 }
 
 .theme-active {
-  margin: 0.9rem 0 0;
-  font-family: var(--font-mono);
-  font-size: 0.72rem;
-  letter-spacing: 0.04em;
+  margin: 1rem 0 0;
+  font-size: 0.85rem;
   color: var(--muted);
 }
 
@@ -616,9 +579,8 @@ body.dragging::after {
   animation: disc-spin var(--spin-dur, 4.8s) linear infinite;
   animation-play-state: paused;
   box-shadow:
-    0 24px 60px rgba(0, 0, 0, 0.55),
-    0 0 0 1px color-mix(in srgb, var(--text) 10%, transparent),
-    0 0 calc(20px + var(--beat, 0) * 50px) color-mix(in srgb, var(--accent) 35%, transparent);
+    0 14px 30px rgb(0 0 0 / 0.22),
+    0 0 0 1px rgb(0 0 0 / 0.08);
 }
 
 /* Label tengah + lubang piringan */
@@ -627,17 +589,16 @@ body.dragging::after {
   position: absolute;
   inset: 44%;
   border-radius: 50%;
-  background: var(--bg);
-  box-shadow:
-    0 0 0 clamp(14px, 3vw, 22px) color-mix(in srgb, var(--accent) 85%, var(--bg)),
-    0 0 0 calc(clamp(14px, 3vw, 22px) + 1px) rgba(0, 0, 0, 0.35);
+  background: var(--surface);
+  box-shadow: 0 0 0 clamp(14px, 3vw, 22px) var(--accent);
 }
 
+/* Piringan tanpa sampul: vinyl hitam beralur dengan label warna tema. */
 .disc .cover.lg.gen {
   font-size: 0;
   background:
-    repeating-radial-gradient(circle, rgba(0, 0, 0, 0) 0 3px, rgba(0, 0, 0, 0.2) 3px 4px),
-    conic-gradient(from var(--ang, 0deg), var(--c1), var(--c2), var(--c1));
+    repeating-radial-gradient(circle, rgb(255 255 255 / 0) 0 3px, rgb(255 255 255 / 0.05) 3px 4px),
+    radial-gradient(circle, #2a2724, #151311);
 }
 
 .now.is-playing .disc .cover.lg {
@@ -655,7 +616,7 @@ body.dragging::after {
   transform-origin: 50% 6px;
   transform: rotate(-4deg);
   transition: transform 0.6s cubic-bezier(0.3, 0.8, 0.3, 1);
-  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.4);
+  box-shadow: 0 4px 8px rgb(0 0 0 / 0.18);
 }
 
 .tonearm::before {
@@ -717,9 +678,9 @@ body.dragging::after {
 .panel {
   padding: 1.3rem 1.35rem 1.4rem;
   border: 1px solid var(--line);
-  border-radius: 20px;
-  background: color-mix(in srgb, var(--surface) 72%, transparent);
-  backdrop-filter: blur(10px);
+  border-radius: 18px;
+  background: var(--surface);
+  box-shadow: var(--shadow);
 }
 
 .panel-head {
@@ -734,11 +695,10 @@ body.dragging::after {
 .panel-head h3 {
   margin: 0;
   font-family: var(--font-display);
-  font-weight: 800;
-  font-size: 1.75rem;
-  line-height: 1;
-  letter-spacing: 0.01em;
-  text-transform: uppercase;
+  font-weight: 600;
+  font-size: 1.2rem;
+  line-height: 1.2;
+  letter-spacing: -0.01em;
 }
 
 .panel-sub {
@@ -754,7 +714,7 @@ body.dragging::after {
 
 #playlist-count {
   flex-basis: auto;
-  font-family: var(--font-mono);
+  font-family: var(--font-body);
   font-size: 0.75rem;
 }
 
@@ -795,7 +755,7 @@ body.dragging::after {
 }
 
 .track.active .t-title {
-  color: var(--accent);
+  color: var(--accent-text);
 }
 
 .track-no {
@@ -803,7 +763,7 @@ body.dragging::after {
   flex-shrink: 0;
   display: grid;
   place-items: center;
-  font-family: var(--font-mono);
+  font-family: var(--font-body);
   font-size: 0.75rem;
   color: var(--muted);
 }
@@ -919,49 +879,42 @@ body.is-playing .eq i:nth-child(3) { animation-delay: -0.6s; }
   gap: 1rem;
   padding: 0.85rem;
   margin-bottom: 0.4rem;
-  border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent);
-  border-radius: 16px;
-  background: linear-gradient(
-    115deg,
-    color-mix(in srgb, var(--accent) 18%, transparent),
-    color-mix(in srgb, var(--surface) 40%, transparent) 70%
-  );
+  border: 0;
+  border-radius: 14px;
+  background: var(--accent-soft);
+}
+
+.up-next-btn.hero:hover {
+  background: color-mix(in oklab, var(--accent) 18%, var(--surface));
 }
 
 .up-next-btn.hero .t-title {
   font-family: var(--font-display);
-  font-weight: 800;
-  font-size: 1.55rem;
-  line-height: 1;
-  text-transform: uppercase;
-  letter-spacing: 0.01em;
+  font-weight: 600;
+  font-size: 1.2rem;
+  line-height: 1.25;
+  letter-spacing: -0.01em;
 }
 
 .up-next-btn.hero .t-artist {
-  font-family: var(--font-serif);
-  font-style: italic;
-  font-size: 1.05rem;
-  color: var(--text);
-  opacity: 0.8;
+  font-size: 0.95rem;
+  color: var(--muted);
 }
 
 .up-next-kicker {
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  font-family: var(--font-mono);
-  font-size: 0.68rem;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: var(--accent);
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: var(--accent-text);
 }
 
 .up-next-kicker .match {
   margin-left: 0;
-  padding: 0.05rem 0.45rem;
+  padding: 0.05rem 0.5rem;
   border-radius: 999px;
-  background: color-mix(in srgb, var(--accent) 20%, transparent);
-  letter-spacing: 0;
+  background: var(--surface);
 }
 
 .up-next-meta .chip-row {
@@ -994,10 +947,10 @@ body.is-playing .eq i:nth-child(3) { animation-delay: -0.6s; }
 .match {
   margin-left: auto;
   flex-shrink: 0;
-  font-family: var(--font-mono);
+  font-family: var(--font-body);
   font-size: 0.72rem;
   font-weight: 600;
-  color: var(--accent);
+  color: var(--accent-text);
 }
 
 /* =========================================================
@@ -1013,16 +966,16 @@ body.is-playing .eq i:nth-child(3) { animation-delay: -0.6s; }
 
 .taste-stat strong {
   font-family: var(--font-display);
-  font-weight: 900;
-  font-size: 3.4rem;
-  line-height: 0.9;
-  color: var(--accent);
+  font-weight: 600;
+  font-size: 2.6rem;
+  line-height: 1;
+  letter-spacing: -0.03em;
+  font-variant-numeric: tabular-nums;
+  color: var(--accent-text);
 }
 
 .taste-stat span {
-  font-family: var(--font-serif);
-  font-style: italic;
-  font-size: 1.2rem;
+  font-size: 0.95rem;
   color: var(--muted);
 }
 
@@ -1032,10 +985,8 @@ body.is-playing .eq i:nth-child(3) { animation-delay: -0.6s; }
 
 .taste-label {
   margin: 0 0 0.4rem;
-  font-family: var(--font-mono);
-  font-size: 0.68rem;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
+  font-size: 0.8rem;
+  font-weight: 600;
   color: var(--muted);
 }
 
@@ -1057,7 +1008,7 @@ body.is-playing .eq i:nth-child(3) { animation-delay: -0.6s; }
 }
 
 .taste-count {
-  font-family: var(--font-mono);
+  font-family: var(--font-body);
   font-size: 0.78rem;
   color: var(--muted);
 }
@@ -1067,7 +1018,7 @@ body.is-playing .eq i:nth-child(3) { animation-delay: -0.6s; }
    ========================================================= */
 
 .discovery-status {
-  font-family: var(--font-mono);
+  font-family: var(--font-body);
   font-size: 0.72rem;
   color: var(--muted);
 }
@@ -1100,13 +1051,12 @@ body.is-playing .eq i:nth-child(3) { animation-delay: -0.6s; }
   padding: 0.75rem;
   border: 1px solid var(--line);
   border-radius: 14px;
-  background: color-mix(in srgb, var(--bg) 35%, transparent);
-  transition: transform 0.2s ease, border-color 0.2s ease;
+  background: var(--bg-2);
+  transition: border-color 0.2s ease;
 }
 
 .discovery-card:hover {
-  transform: translateY(-2px);
-  border-color: color-mix(in srgb, var(--accent) 45%, transparent);
+  border-color: color-mix(in oklab, var(--accent) 45%, var(--line));
 }
 
 .discovery-main {
@@ -1116,9 +1066,7 @@ body.is-playing .eq i:nth-child(3) { animation-delay: -0.6s; }
 }
 
 .discovery-reason {
-  font-family: var(--font-serif);
-  font-style: italic;
-  font-size: 0.95rem;
+  font-size: 0.85rem;
   color: var(--muted);
 }
 
@@ -1215,10 +1163,9 @@ body.is-playing .eq i:nth-child(3) { animation-delay: -0.6s; }
   gap: 1.25rem;
   padding: 0.7rem 1.1rem;
   border: 1px solid var(--line);
-  border-radius: 22px;
-  background: color-mix(in srgb, var(--bg) 78%, transparent);
-  backdrop-filter: blur(18px) saturate(1.3);
-  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.45);
+  border-radius: 20px;
+  background: var(--surface);
+  box-shadow: 0 2px 6px rgb(0 0 0 / 0.06), 0 16px 40px rgb(0 0 0 / 0.12);
 }
 
 .dock-track {
@@ -1283,19 +1230,27 @@ body.is-playing .eq i:nth-child(3) { animation-delay: -0.6s; }
   background: color-mix(in srgb, var(--text) 10%, transparent);
 }
 
+.ctrl svg {
+  width: 1.15rem;
+  height: 1.15rem;
+  fill: currentColor;
+}
+
 .ctrl.play {
   width: 3rem;
   height: 3rem;
-  background: var(--text);
-  color: var(--bg);
-  font-size: 1.05rem;
-  transform: scale(calc(1 + var(--beat, 0) * 0.08));
-  box-shadow: 0 0 calc(var(--beat, 0) * 26px) color-mix(in srgb, var(--accent) 70%, transparent);
+  background: var(--accent);
+  color: var(--accent-contrast);
+  transform: scale(calc(1 + var(--beat, 0) * 0.05));
+}
+
+.ctrl.play svg {
+  width: 1.35rem;
+  height: 1.35rem;
 }
 
 .ctrl.play:hover {
-  background: var(--accent);
-  color: var(--accent-contrast);
+  background: color-mix(in oklab, var(--accent) 85%, var(--text));
 }
 
 .progress {
@@ -1307,8 +1262,7 @@ body.is-playing .eq i:nth-child(3) { animation-delay: -0.6s; }
 .time {
   width: 2.6rem;
   flex-shrink: 0;
-  font-family: var(--font-mono);
-  font-size: 0.72rem;
+  font-size: 0.8rem;
   font-variant-numeric: tabular-nums;
   color: var(--muted);
 }
@@ -1368,23 +1322,24 @@ input[type='range']::-webkit-slider-thumb {
   width: 14px;
   height: 14px;
   margin-top: -5px;
+  border: 2px solid var(--surface);
   border-radius: 50%;
-  background: var(--text);
-  opacity: 0;
-  transition: opacity 0.15s ease;
+  background: var(--accent);
+  box-shadow: 0 1px 3px rgb(0 0 0 / 0.25);
+  transition: transform 0.15s ease;
 }
 
 input[type='range']::-moz-range-thumb {
-  width: 14px;
-  height: 14px;
-  border: 0;
+  width: 12px;
+  height: 12px;
+  border: 2px solid var(--surface);
   border-radius: 50%;
-  background: var(--text);
+  background: var(--accent);
 }
 
 input[type='range']:hover::-webkit-slider-thumb,
 input[type='range']:focus-visible::-webkit-slider-thumb {
-  opacity: 1;
+  transform: scale(1.2);
 }
 
 /* =========================================================
@@ -1411,8 +1366,7 @@ input[type='range']:focus-visible::-webkit-slider-thumb {
   border: 1px solid var(--line);
   border-bottom-width: 2px;
   border-radius: 5px;
-  font-family: var(--font-mono);
-  font-size: 0.72rem;
+  font-size: 0.75rem;
 }
 
 /* =========================================================
@@ -1440,9 +1394,8 @@ input[type='range']:focus-visible::-webkit-slider-thumb {
   overflow: hidden;
   border-radius: 10px;
   font-family: var(--font-display);
-  font-weight: 800;
-  color: rgba(255, 255, 255, 0.92);
-  text-shadow: 0 1px 6px rgba(0, 0, 0, 0.35);
+  font-weight: 600;
+  color: rgb(255 255 255 / 0.95);
   background: linear-gradient(var(--ang, 135deg), var(--c1, var(--accent)), var(--c2, var(--surface)));
 }
 
@@ -1489,26 +1442,24 @@ input[type='range']:focus-visible::-webkit-slider-thumb {
 
 .chip {
   display: inline-block;
-  padding: 0.18rem 0.6rem;
-  border: 1px solid color-mix(in srgb, var(--text) 14%, transparent);
+  padding: 0.2rem 0.6rem;
   border-radius: 999px;
-  font-family: var(--font-mono);
-  font-size: 0.68rem;
+  background: color-mix(in oklab, var(--text) 7%, var(--surface));
+  font-size: 0.75rem;
+  font-weight: 500;
   line-height: 1.4;
-  letter-spacing: 0.02em;
   color: var(--muted);
   white-space: nowrap;
 }
 
 .chip.accent {
-  border-color: transparent;
-  background: var(--accent);
-  color: var(--accent-contrast);
+  background: var(--accent-soft);
+  color: var(--accent-text);
   font-weight: 600;
 }
 
 .chip.muted {
-  font-style: italic;
+  opacity: 0.75;
 }
 
 /* =========================================================
@@ -1620,5 +1571,154 @@ input[type='range']:focus-visible::-webkit-slider-thumb {
 @media (max-width: 760px) {
   .topbar-actions .btn.primary {
     padding: 0.55rem 0.9rem;
+  }
+}
+
+/* Ikon SVG di tombol */
+.up-next-play svg,
+.vol-icon svg {
+  display: block;
+  fill: currentColor;
+}
+
+.up-next-play svg {
+  width: 1.1rem;
+  height: 1.1rem;
+  margin-left: 2px;
+}
+
+.vol-icon svg {
+  width: 1.2rem;
+  height: 1.2rem;
+}
+
+/* =========================================================
+   Halaman pembuka: dua kolom + ilustrasi piringan
+   ========================================================= */
+
+@media (min-width: 900px) {
+  .landing {
+    display: grid;
+    grid-template-columns: 1.15fr 0.85fr;
+    align-items: center;
+    column-gap: 3rem;
+  }
+
+  .features {
+    grid-column: 1 / -1;
+  }
+}
+
+.landing-copy .reveal:nth-child(1) { animation-delay: 0s; }
+.landing-copy .reveal:nth-child(2) { animation-delay: 0.08s; }
+.landing-copy .reveal:nth-child(3) { animation-delay: 0.16s; }
+.landing-copy .reveal:nth-child(4) { animation-delay: 0.24s; }
+
+.landing-art {
+  position: relative;
+  width: min(100%, 24rem);
+  aspect-ratio: 1.25;
+  justify-self: center;
+  animation: rise 0.9s 0.2s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+
+.sleeve {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 78%;
+  aspect-ratio: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 1.4rem;
+  border-radius: 6px;
+  background:
+    radial-gradient(120% 90% at 100% 100%, color-mix(in oklab, var(--accent) 70%, transparent), transparent 60%),
+    var(--accent-soft);
+  box-shadow: 0 2px 4px rgb(0 0 0 / 0.08), 0 18px 40px rgb(0 0 0 / 0.14);
+  color: var(--text);
+}
+
+.sleeve-side {
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: var(--accent-text);
+}
+
+.sleeve-title {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: clamp(1.4rem, 2.6vw, 2rem);
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+}
+
+.sleeve-lines {
+  display: grid;
+  gap: 6px;
+}
+
+.sleeve-lines i {
+  display: block;
+  height: 3px;
+  border-radius: 2px;
+  background: color-mix(in oklab, var(--text) 22%, transparent);
+}
+
+.sleeve-lines i:nth-child(1) { width: 70%; }
+.sleeve-lines i:nth-child(2) { width: 52%; }
+.sleeve-lines i:nth-child(3) { width: 62%; }
+.sleeve-lines i:nth-child(4) { width: 40%; }
+
+.record {
+  position: absolute;
+  right: 0;
+  top: 6%;
+  width: 70%;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background:
+    repeating-radial-gradient(circle, rgb(255 255 255 / 0) 0 3px, rgb(255 255 255 / 0.05) 3px 4px),
+    radial-gradient(circle, #2a2724, #141210);
+  box-shadow: 0 16px 34px rgb(0 0 0 / 0.25);
+  animation: disc-spin 14s linear infinite;
+}
+
+.record-label {
+  position: absolute;
+  inset: 33%;
+  border-radius: 50%;
+  background: var(--accent);
+}
+
+.record-label::after {
+  content: '';
+  position: absolute;
+  inset: 44%;
+  border-radius: 50%;
+  background: var(--bg);
+}
+
+@media (max-width: 899px) {
+  .landing-art {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .record,
+  .landing-art {
+    animation: none;
+  }
+}
+
+/* Mode gelap: beri tepi halus agar piringan hitam tidak tenggelam */
+@media (prefers-color-scheme: dark) {
+  .disc .cover.lg,
+  .record {
+    box-shadow:
+      0 14px 30px rgb(0 0 0 / 0.45),
+      0 0 0 1px rgb(255 255 255 / 0.12);
   }
 }

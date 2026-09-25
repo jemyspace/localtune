@@ -21,6 +21,7 @@ import { THEME_LABELS } from './theme/types'
 import { trackKeyFor } from './trackKey'
 import type { Track } from './types'
 import { coverArtHtml } from './ui/coverArt'
+import { ICONS } from './ui/icons'
 import './style.css'
 
 const sceneCanvas = document.createElement('canvas')
@@ -83,7 +84,6 @@ const trackHandlers = listenTracker.handlers()
 
 const app = document.querySelector<HTMLDivElement>('#app')!
 app.innerHTML = `
-  <div class="grain" aria-hidden="true"></div>
   <div class="shell">
     <header class="topbar">
       <a class="logo" href="#" aria-label="LocalTune">
@@ -93,13 +93,14 @@ app.innerHTML = `
       <div class="topbar-actions">
         <div class="segmented" role="radiogroup" aria-label="Mode tampilan">
           <label><input type="radio" name="ui-mode" value="default" checked /><span>Klasik</span></label>
-          <label><input type="radio" name="ui-mode" value="adaptive" /><span>Adaptif ✦</span></label>
+          <label><input type="radio" name="ui-mode" value="adaptive" /><span>Adaptif</span></label>
         </div>
         <button type="button" class="btn primary js-pick" id="btn-pick">＋ Tambah musik</button>
       </div>
     </header>
 
     <section class="landing" id="empty">
+      <div class="landing-copy">
       <p class="kicker reveal">Pemutar lokal · privat · tanpa akun</p>
       <h1 class="landing-title reveal">
         Koleksimu,<br />
@@ -113,10 +114,19 @@ app.innerHTML = `
         <button type="button" class="btn primary big js-pick">Pilih folder musik</button>
         <span class="drop-hint">atau seret file audio ke halaman ini</span>
       </div>
+      </div>
+      <div class="landing-art" aria-hidden="true">
+        <div class="record"><span class="record-label"></span></div>
+        <div class="sleeve">
+          <span class="sleeve-side">Sisi A</span>
+          <span class="sleeve-title">Lagu-lagu<br />favoritmu</span>
+          <span class="sleeve-lines"><i></i><i></i><i></i><i></i></span>
+        </div>
+      </div>
       <ul class="features reveal">
-        <li><b>01</b><strong>100% di perangkatmu</strong><span>File tidak pernah diunggah. Hosting hanya menyajikan aplikasinya.</span></li>
-        <li><b>02</b><strong>Bergerak ikut irama</strong><span>Latar, piringan, dan cahaya berdenyut mengikuti ketukan lagu.</span></li>
-        <li><b>03</b><strong>Belajar seleramu</strong><span>Antrean berikutnya disusun dari lagu yang benar-benar kamu dengar.</span></li>
+        <li><b>1</b><strong>100% di perangkatmu</strong><span>File tidak pernah diunggah. Hosting hanya menyajikan aplikasinya.</span></li>
+        <li><b>2</b><strong>Bergerak ikut irama</strong><span>Latar, piringan, dan cahaya berdenyut mengikuti ketukan lagu.</span></li>
+        <li><b>3</b><strong>Belajar seleramu</strong><span>Antrean berikutnya disusun dari lagu yang benar-benar kamu dengar.</span></li>
       </ul>
     </section>
 
@@ -214,9 +224,9 @@ app.innerHTML = `
         </div>
         <div class="dock-center">
           <div class="controls">
-            <button type="button" class="ctrl" id="btn-prev" aria-label="Sebelumnya">⏮</button>
-            <button type="button" class="ctrl play" id="btn-play" aria-label="Putar">▶</button>
-            <button type="button" class="ctrl" id="btn-next" aria-label="Berikutnya">⏭</button>
+            <button type="button" class="ctrl" id="btn-prev" aria-label="Sebelumnya">${ICONS.prev}</button>
+            <button type="button" class="ctrl play" id="btn-play" aria-label="Putar">${ICONS.play}</button>
+            <button type="button" class="ctrl" id="btn-next" aria-label="Berikutnya">${ICONS.next}</button>
           </div>
           <div class="progress">
             <span class="time" id="pos">0:00</span>
@@ -225,7 +235,7 @@ app.innerHTML = `
           </div>
         </div>
         <label class="vol">
-          <span aria-hidden="true">🔈</span>
+          <span class="vol-icon" aria-hidden="true">${ICONS.volume}</span>
           <input type="range" id="volume" min="0" max="1" step="0.01" value="1" aria-label="Volume" />
         </label>
       </div>
@@ -395,7 +405,7 @@ function renderDiscovery(): void {
       const query = encodeURIComponent(`${item.artist} ${item.title ?? ''}`.trim())
       const actions =
         libIdx != null
-          ? `<button type="button" class="btn primary small discovery-play" data-index="${libIdx}">▶ Putar</button>`
+          ? `<button type="button" class="btn primary small discovery-play" data-index="${libIdx}">Putar di sini</button>`
           : `<a class="btn ghost small" href="https://www.youtube.com/results?search_query=${query}" target="_blank" rel="noopener noreferrer">YouTube ↗</a>
              <a class="btn ghost small" href="https://open.spotify.com/search/${query}" target="_blank" rel="noopener noreferrer">Spotify ↗</a>`
       return `
@@ -472,7 +482,7 @@ function renderUpNext(): void {
           <span class="t-artist">${escapeHtml(item.artist)}</span>
           <span class="chip-row">${chips(item.reasons)}</span>
         </span>
-        <span class="up-next-play" aria-hidden="true">▶</span>
+        <span class="up-next-play" aria-hidden="true">${ICONS.play}</span>
       </button>
     </li>`
       }
@@ -553,7 +563,7 @@ function renderAppearance(): void {
 
   appearanceHintEl.textContent = adaptive
     ? 'Warna dan latar dipilih dari genre serta analisis irama lagu — semuanya dihitung di perangkatmu.'
-    : 'Nyalakan mode Adaptif ✦ di atas agar tampilan ikut berubah mengikuti genre dan irama setiap lagu.'
+    : 'Pilih mode Adaptif di atas agar tampilan ikut berubah mengikuti genre dan irama setiap lagu.'
 }
 
 let lastDiscKey = ''
@@ -607,7 +617,7 @@ function renderNow(): void {
   dockTitleEl.textContent = t?.title ?? '—'
   dockArtistEl.textContent = t?.artist ?? '—'
   renderNowVibe(t)
-  btnPlay.textContent = player.isPlaying() ? '⏸' : '▶'
+  btnPlay.innerHTML = player.isPlaying() ? ICONS.pause : ICONS.play
   btnPlay.setAttribute('aria-label', player.isPlaying() ? 'Jeda' : 'Putar')
 
   const audio = player.getAudio()
