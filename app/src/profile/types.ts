@@ -17,4 +17,8 @@ export interface UpNextItem {
   title: string
   artist: string
   score: number
+  /** Alasan singkat yang ditampilkan sebagai chip, mis. "Suasana Energik". */
+  reasons: string[]
+  /** Kecocokan nuansa dengan lagu sekarang (0–100), jika analisis audio tersedia. */
+  match?: number
 }

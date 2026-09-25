@@ -25,7 +25,8 @@ async function decodeSample(file: File): Promise<AudioBuffer> {
 }
 
 function estimateTempo(samples: Float32Array, sampleRate: number): number | null {
-  const windowSize = Math.floor(sampleRate * 0.05)
+  // Jendela 10 ms: resolusi lag cukup halus agar 128 BPM tidak terbaca 133.
+  const windowSize = Math.floor(sampleRate * 0.01)
   if (samples.length < windowSize * 20) return null
 
   const envelopes: number[] = []
@@ -38,16 +39,24 @@ function estimateTempo(samples: Float32Array, sampleRate: number): number | null
     envelopes.push(Math.sqrt(sum / windowSize))
   }
 
+  // Onset envelope (hanya kenaikan energi) → ketukan lebih jelas daripada RMS mentah.
+  const onsets = envelopes.map((v, i) => Math.max(0, v - (envelopes[i - 1] ?? v)))
+
+  const framesPerSec = sampleRate / windowSize
+  const minLag = Math.max(1, Math.floor((60 / 190) * framesPerSec))
+  const maxLag = Math.floor((60 / 55) * framesPerSec)
+  const corrAt = (lag: number): number => {
+    let corr = 0
+    for (let i = 0; i < onsets.length - lag; i++) {
+      corr += (onsets[i] ?? 0) * (onsets[i + lag] ?? 0)
+    }
+    return corr / Math.max(1, onsets.length - lag)
+  }
+
   let bestLag = 0
   let bestCorr = 0
-  const minLag = Math.floor((60 / 180) * (sampleRate / windowSize))
-  const maxLag = Math.floor((60 / 60) * (sampleRate / windowSize))
-
   for (let lag = minLag; lag <= maxLag; lag++) {
-    let corr = 0
-    for (let i = 0; i < envelopes.length - lag; i++) {
-      corr += (envelopes[i] ?? 0) * (envelopes[i + lag] ?? 0)
-    }
+    const corr = corrAt(lag)
     if (corr > bestCorr) {
       bestCorr = corr
       bestLag = lag
@@ -55,6 +64,12 @@ function estimateTempo(samples: Float32Array, sampleRate: number): number | null
   }
 
   if (bestLag <= 0) return null
+  // Koreksi oktaf: autokorelasi juga memuncak di 2× periode ketukan (setengah tempo).
+  const half = Math.round(bestLag / 2)
+  if (half >= minLag) {
+    const halfCorr = Math.max(corrAt(half - 1), corrAt(half), corrAt(half + 1))
+    if (halfCorr >= bestCorr * 0.75) bestLag = half
+  }
   const bpm = (60 * sampleRate) / (windowSize * bestLag)
   if (!Number.isFinite(bpm) || bpm < 50 || bpm > 200) return null
   return Math.round(bpm)

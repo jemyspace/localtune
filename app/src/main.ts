@@ -1,5 +1,5 @@
 import { AudioIntelTrigger } from './audio/audioIntelTrigger'
-import type { AudioMood } from './audio/types'
+import { MOOD_LABELS } from './audio/types'
 import { DiscoveryStore } from './discovery/discoveryStore'
 import { ResearchClient } from './discovery/researchClient'
 import { ResearchTrigger } from './discovery/researchTrigger'
@@ -14,11 +14,19 @@ import { UpNextEngine } from './profile/upNextEngine'
 import { isResearchEnabled, setResearchOptOut } from './settings'
 import { ListenTracker } from './taste/listenTracker'
 import { TasteApi } from './taste/tasteApi'
+import { prefersReducedMotion } from './theme/ambience'
+import { SCENE_LABELS } from './theme/rhythmScene'
 import { ThemeController } from './theme/themeController'
 import { THEME_LABELS } from './theme/types'
 import { trackKeyFor } from './trackKey'
 import type { Track } from './types'
+import { coverArtHtml } from './ui/coverArt'
 import './style.css'
+
+const sceneCanvas = document.createElement('canvas')
+sceneCanvas.className = 'rhythm-scene'
+sceneCanvas.setAttribute('aria-hidden', 'true')
+document.body.prepend(sceneCanvas)
 
 const library = new Library()
 const player = new Player(library)
@@ -28,7 +36,12 @@ const discoveryStore = new DiscoveryStore()
 const researchClient = new ResearchClient()
 const researchTrigger = new ResearchTrigger(researchClient, discoveryStore, tasteApi, library)
 const audioIntel = new AudioIntelTrigger(discoveryStore, tasteApi, library)
-const themeController = new ThemeController(player, discoveryStore, audioIntel.getFeaturesStore())
+const themeController = new ThemeController(
+  player,
+  discoveryStore,
+  audioIntel.getFeaturesStore(),
+  sceneCanvas,
+)
 const listenTracker = new ListenTracker(player, library, tasteApi)
 listenTracker.bindTimeupdate()
 listenTracker.setMeaningfulPlayHandler((track) => {
@@ -41,7 +54,19 @@ function kickDiscovery(track: Track | undefined): void {
   audioIntel.onTrackActivity(track)
 }
 
+let renderQueued = false
+function scheduleRender(): void {
+  if (renderQueued) return
+  renderQueued = true
+  requestAnimationFrame(() => {
+    renderQueued = false
+    renderNow()
+  })
+}
+
 library.onTrackEnriched = (track) => {
+  // Tag/sampul baru → perbarui kartu (debounce agar impor banyak file tetap ringan).
+  scheduleRender()
   const current = player.current()
   const isCurrent = current?.id === track.id
   const isFirstPending = !current && library.getAll()[0]?.id === track.id
@@ -55,14 +80,6 @@ library.onTrackEnriched = (track) => {
   }
 }
 const trackHandlers = listenTracker.handlers()
-
-const MOOD_LABELS: Record<AudioMood, string> = {
-  energetic: 'Energik',
-  calm: 'Tenang',
-  bright: 'Cerah',
-  warm: 'Hangat',
-  balanced: 'Seimbang',
-}
 
 const app = document.querySelector<HTMLDivElement>('#app')!
 app.innerHTML = `
@@ -87,6 +104,10 @@ app.innerHTML = `
             Adaptif
           </label>
         </div>
+        <label class="settings-toggle scene-toggle" id="scene-toggle-wrap" hidden>
+          <input type="checkbox" id="scene-enabled" checked />
+          Latar bergerak mengikuti irama lagu
+        </label>
         <p class="appearance-hint" id="appearance-hint">Adaptif mengikuti genre dari tag lokal & metadata research (bukan AI). Hemat data; reset ke Default saat tab ditutup.</p>
         <p class="theme-active" id="theme-active" hidden></p>
       </div>
@@ -98,9 +119,15 @@ app.innerHTML = `
 
     <section class="stage" id="stage" hidden>
       <div class="now">
-        <p class="now-label">Sedang diputar</p>
-        <h2 class="now-title" id="now-title">—</h2>
-        <p class="now-artist" id="now-artist">—</p>
+        <div class="now-head">
+          <div class="disc" id="now-disc"></div>
+          <div class="now-info">
+            <p class="now-label">Sedang diputar</p>
+            <h2 class="now-title" id="now-title">—</h2>
+            <p class="now-artist" id="now-artist">—</p>
+            <div class="vibe-chips" id="now-vibe"></div>
+          </div>
+        </div>
         <p class="now-time"><span id="pos">0:00</span> / <span id="dur">0:00</span></p>
         <input type="range" id="seek" min="0" max="0" value="0" step="0.1" aria-label="Seek" />
         <div class="controls">
@@ -190,6 +217,11 @@ const btnRefreshDiscovery = $('#btn-refresh-discovery')
 const uiModeInputs = app.querySelectorAll<HTMLInputElement>('input[name="ui-mode"]')
 const appearanceHintEl = $('#appearance-hint')
 const themeActiveEl = $('#theme-active')
+const sceneToggleWrapEl = $('#scene-toggle-wrap')
+const sceneEnabledEl = $('#scene-enabled') as HTMLInputElement
+const nowDiscEl = $('#now-disc')
+const nowVibeEl = $('#now-vibe')
+const nowEl = app.querySelector('.now') as HTMLElement
 
 function $(sel: string): HTMLElement {
   return app.querySelector(sel) as HTMLElement
@@ -211,9 +243,12 @@ function renderPlaylist(): void {
       (t, i) => `
     <li class="track ${current?.id === t.id ? 'active' : ''} ${t.error ? 'err' : ''}" data-index="${i}">
       <button type="button" class="track-btn">
-        <span class="t-title">${escapeHtml(t.title)}</span>
-        <span class="t-artist">${escapeHtml(t.artist)}</span>
-        ${t.error ? `<span class="t-err">${escapeHtml(t.error)}</span>` : ''}
+        ${coverArtHtml(t.artist, t.title, t.coverUrl, 'cover xs')}
+        <span class="track-meta">
+          <span class="t-title">${escapeHtml(t.title)}</span>
+          <span class="t-artist">${escapeHtml(t.artist)}</span>
+          ${t.error ? `<span class="t-err">${escapeHtml(t.error)}</span>` : ''}
+        </span>
       </button>
     </li>`,
     )
@@ -292,24 +327,29 @@ function renderDiscovery(): void {
     .map((item) => {
       const inLib = matchesLocalLibrary(library, item.artist, item.title)
       const libIdx = inLib ? findLibraryIndex(item.artist, item.title) : undefined
-      const badge = inLib
-        ? '<span class="discovery-badge">Ada di library</span>'
-        : '<span class="discovery-badge muted">Tidak diputar</span>'
-      const title = item.title ? escapeHtml(item.title) : '—'
+      const libTrack = libIdx != null ? library.getAll()[libIdx] : undefined
+      const title = item.title ? escapeHtml(item.title) : 'Jelajahi artis ini'
       const meta = item.reason ? `<span class="discovery-reason">${escapeHtml(item.reason)}</span>` : ''
-      const playBtn =
+      const genre = item.genre ? `<span class="chip">${escapeHtml(item.genre)}</span>` : ''
+      const inLibChip = inLib ? '<span class="chip accent">Ada di library</span>' : ''
+      // Tautan ke platform resmi: pengguna mendengarkan di layanan berlisensi,
+      // LocalTune tidak memutar/menyimpan audio pihak ketiga.
+      const query = encodeURIComponent(`${item.artist} ${item.title ?? ''}`.trim())
+      const actions =
         libIdx != null
-          ? `<button type="button" class="btn ghost small discovery-play" data-index="${libIdx}">Putar</button>`
-          : ''
+          ? `<button type="button" class="btn primary small discovery-play" data-index="${libIdx}">▶ Putar</button>`
+          : `<a class="btn ghost small" href="https://www.youtube.com/results?search_query=${query}" target="_blank" rel="noopener noreferrer">YouTube ↗</a>
+             <a class="btn ghost small" href="https://open.spotify.com/search/${query}" target="_blank" rel="noopener noreferrer">Spotify ↗</a>`
       return `
-    <li class="discovery-item">
+    <li class="discovery-card">
+      ${coverArtHtml(item.artist, item.title, libTrack?.coverUrl, 'cover sm')}
       <div class="discovery-main">
         <span class="t-title">${title}</span>
         <span class="t-artist">${escapeHtml(item.artist)}</span>
         ${meta}
-        ${badge}
+        <span class="chip-row">${inLibChip}${genre}</span>
+        <span class="discovery-actions">${actions}</span>
       </div>
-      ${playBtn}
     </li>`
     })
     .join('')
@@ -353,20 +393,44 @@ function renderUpNext(): void {
     return
   }
 
+  const tracks = library.getAll()
+  const chips = (reasons: string[]): string =>
+    reasons.map((r) => `<span class="chip">${escapeHtml(r)}</span>`).join('')
+  const matchBadge = (match?: number): string =>
+    match != null ? `<span class="match" title="Kecocokan nuansa dengan lagu sekarang">${match}%</span>` : ''
+
   upNextListEl.innerHTML = items
     .slice(0, 8)
-    .map(
-      (item, i) => `
+    .map((item, i) => {
+      const cover = tracks[item.index]?.coverUrl
+      if (i === 0) {
+        return `
+    <li class="up-next-hero">
+      <button type="button" class="up-next-btn hero" data-index="${item.index}">
+        ${coverArtHtml(item.artist, item.title, cover, 'cover md')}
+        <span class="up-next-meta">
+          <span class="up-next-kicker">Berikutnya ${matchBadge(item.match)}</span>
+          <span class="t-title">${escapeHtml(item.title)}</span>
+          <span class="t-artist">${escapeHtml(item.artist)}</span>
+          <span class="chip-row">${chips(item.reasons)}</span>
+        </span>
+        <span class="up-next-play" aria-hidden="true">▶</span>
+      </button>
+    </li>`
+      }
+      return `
     <li>
       <button type="button" class="up-next-btn" data-index="${item.index}">
-        <span class="up-next-rank">${i + 1}</span>
+        ${coverArtHtml(item.artist, item.title, cover, 'cover xs')}
         <span class="up-next-meta">
           <span class="t-title">${escapeHtml(item.title)}</span>
           <span class="t-artist">${escapeHtml(item.artist)}</span>
+          <span class="chip-row">${chips(item.reasons.slice(0, 1))}</span>
         </span>
+        ${matchBadge(item.match)}
       </button>
-    </li>`,
-    )
+    </li>`
+    })
     .join('')
 
   upNextListEl.querySelectorAll<HTMLButtonElement>('.up-next-btn').forEach((btn) => {
@@ -418,14 +482,47 @@ function renderAppearance(): void {
   const features = current ? audioIntel.getFeaturesStore().get(trackKeyFor(current)) : null
 
   themeActiveEl.hidden = !adaptive
+  sceneToggleWrapEl.hidden = !adaptive
+  sceneEnabledEl.checked = themeController.isSceneEnabled()
+  sceneEnabledEl.disabled = prefersReducedMotion()
   if (adaptive) {
     const moodPart = features ? ` · suasana ${MOOD_LABELS[features.mood]}` : ''
-    themeActiveEl.textContent = `Tema aktif: ${THEME_LABELS[themeId]}${moodPart}`
+    const sceneKind = themeController.getSceneKind()
+    const scenePart =
+      sceneKind && themeController.isSceneEnabled() ? ` · latar ${SCENE_LABELS[sceneKind]}` : ''
+    themeActiveEl.textContent = `Tema aktif: ${THEME_LABELS[themeId]}${moodPart}${scenePart}`
   }
 
   appearanceHintEl.textContent = adaptive
     ? 'Warna UI dari tag, metadata research, atau analisis nada lokal (tanpa unggah audio).'
     : 'Adaptif: tag lokal, research internet, dan analisis nada. Reset ke Default saat tab ditutup.'
+}
+
+let lastDiscKey = ''
+
+function renderNowVibe(t: Track | undefined): void {
+  const discKey = t ? `${t.id}|${t.artist}|${t.title}|${t.coverUrl ?? ''}` : ''
+  if (discKey !== lastDiscKey) {
+    lastDiscKey = discKey
+    nowDiscEl.innerHTML = t ? coverArtHtml(t.artist, t.title, t.coverUrl, 'cover lg') : ''
+  }
+  nowEl.classList.toggle('is-playing', player.isPlaying())
+
+  const features = t ? audioIntel.getFeaturesStore().get(trackKeyFor(t)) : null
+  // Piringan berputar satu kali tiap 8 ketukan → terasa mengikuti tempo.
+  const bpm = features?.tempoBpm ?? 100
+  nowEl.style.setProperty('--spin-dur', `${((60 / bpm) * 8).toFixed(2)}s`)
+
+  const chips: string[] = []
+  if (features) {
+    chips.push(`<span class="chip accent">${MOOD_LABELS[features.mood]}</span>`)
+    if (features.tempoBpm) chips.push(`<span class="chip">${features.tempoBpm} BPM</span>`)
+    chips.push(`<span class="chip">Energi ${Math.round(Math.min(1, features.energy * 5) * 100)}%</span>`)
+  } else if (t && !t.error) {
+    chips.push('<span class="chip muted">Menganalisis nuansa…</span>')
+  }
+  if (t?.genre && t.genre !== 'Unknown') chips.push(`<span class="chip">${escapeHtml(t.genre)}</span>`)
+  nowVibeEl.innerHTML = chips.join('')
 }
 
 function applyThemeForCurrentTrack(): void {
@@ -443,6 +540,7 @@ function renderNow(): void {
   const t = player.current()
   nowTitle.textContent = t?.title ?? '—'
   nowArtist.textContent = t?.artist ?? '—'
+  renderNowVibe(t)
   btnPlay.textContent = player.isPlaying() ? '⏸' : '▶'
   btnPlay.setAttribute('aria-label', player.isPlaying() ? 'Pause' : 'Play')
 
@@ -532,7 +630,12 @@ uiModeInputs.forEach((input) => {
 audioIntel.subscribe(() => {
   themeController.onTrackChange(player.current())
   refreshUpNext()
+  renderNowVibe(player.current())
   renderAppearance()
+})
+
+sceneEnabledEl.addEventListener('change', () => {
+  themeController.setSceneEnabled(sceneEnabledEl.checked)
 })
 
 themeController.subscribe(() => renderAppearance())

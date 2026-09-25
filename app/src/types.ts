@@ -7,6 +7,8 @@ export interface Track {
   album?: string
   genre?: string
   durationSec?: number
+  /** Blob URL gambar album dari tag ID3 — tetap lokal, tidak diunggah. */
+  coverUrl?: string
   error?: string
   file: File
 }

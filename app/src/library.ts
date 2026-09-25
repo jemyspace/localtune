@@ -17,6 +17,7 @@ export class Library {
   clear(): void {
     for (const t of this.tracks) {
       URL.revokeObjectURL(t.objectUrl)
+      if (t.coverUrl) URL.revokeObjectURL(t.coverUrl)
     }
     this.tracks = []
   }
@@ -56,6 +57,7 @@ export class Library {
       artist: tags.artist || 'Unknown',
       album: tags.album,
       genre: tags.genre || 'Unknown',
+      coverUrl: tags.coverUrl,
     })
     const updated = this.getById(track.id)
     if (updated) this.onTrackEnriched?.(updated)

@@ -1,5 +1,13 @@
 export type AudioMood = 'energetic' | 'calm' | 'bright' | 'warm' | 'balanced'
 
+export const MOOD_LABELS: Record<AudioMood, string> = {
+  energetic: 'Energik',
+  calm: 'Tenang',
+  bright: 'Cerah',
+  warm: 'Hangat',
+  balanced: 'Seimbang',
+}
+
 export interface AudioFeatures {
   trackKey: string
   energy: number

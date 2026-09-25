@@ -136,6 +136,11 @@ html[data-theme='soul'] {
   box-sizing: border-box;
 }
 
+/* Atribut hidden harus menang atas display: grid/flex dari class. */
+[hidden] {
+  display: none !important;
+}
+
 html,
 body {
   margin: 0;
@@ -421,10 +426,17 @@ body::before {
   background: transparent;
   color: inherit;
   font: inherit;
-  padding: 0.85rem 1rem;
+  padding: 0.7rem 1rem;
   cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.track-meta {
   display: grid;
   gap: 0.15rem;
+  min-width: 0;
 }
 
 .t-title {
@@ -617,24 +629,38 @@ body::before {
   gap: 0.55rem;
 }
 
-.discovery-item {
+.discovery-card {
   display: flex;
   align-items: flex-start;
-  justify-content: space-between;
-  gap: 0.75rem;
-  padding: 0.55rem 0;
-  border-top: 1px solid var(--line);
+  gap: 0.8rem;
+  padding: 0.7rem;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--surface) 70%, transparent);
+  transition: transform 0.2s ease, border-color 0.2s ease;
 }
 
-.discovery-item:first-child {
-  border-top: 0;
-  padding-top: 0;
+.discovery-card:hover {
+  transform: translateY(-2px);
+  border-color: color-mix(in srgb, var(--accent) 45%, transparent);
 }
 
 .discovery-main {
   display: grid;
-  gap: 0.12rem;
+  gap: 0.2rem;
   min-width: 0;
+}
+
+.discovery-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-top: 0.35rem;
+}
+
+.discovery-actions .btn.small {
+  margin: 0;
+  text-decoration: none;
 }
 
 .discovery-reason {
@@ -668,4 +694,264 @@ body::before {
 
 .foot p {
   margin: 0;
+}
+
+/* ---------- Suasana berirama (RFC-005 ambience, diperluas) ---------- */
+
+.rhythm-scene {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.now {
+  position: relative;
+  box-shadow: 0 0 calc(var(--beat, 0) * 42px) color-mix(in srgb, var(--accent) 45%, transparent);
+  border-color: color-mix(in srgb, var(--accent) calc(var(--beat, 0) * 60%), var(--line));
+  transition: box-shadow 0.08s linear, border-color 0.08s linear;
+}
+
+.now-head {
+  display: flex;
+  align-items: center;
+  gap: 1.1rem;
+}
+
+.now-info {
+  min-width: 0;
+}
+
+.disc {
+  flex-shrink: 0;
+  transform: scale(calc(1 + var(--beat, 0) * 0.05));
+  transition: transform 0.08s linear;
+}
+
+.disc .cover.lg {
+  border-radius: 50%;
+  animation: disc-spin var(--spin-dur, 4.8s) linear infinite;
+  animation-play-state: paused;
+  box-shadow:
+    0 10px 30px rgba(0, 0, 0, 0.45),
+    0 0 0 3px color-mix(in srgb, var(--accent) 35%, transparent);
+}
+
+/* Lubang tengah piringan */
+.disc .cover.lg::after {
+  content: '';
+  position: absolute;
+  inset: 42%;
+  border-radius: 50%;
+  background: var(--bg);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--text) 15%, transparent);
+}
+
+.now.is-playing .disc .cover.lg {
+  animation-play-state: running;
+}
+
+@keyframes disc-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.now-title {
+  text-shadow: 0 0 calc(var(--beat, 0) * 18px) color-mix(in srgb, var(--accent) 70%, transparent);
+}
+
+.vibe-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin-top: 0.55rem;
+}
+
+/* ---------- Sampul ---------- */
+
+.cover {
+  position: relative;
+  display: inline-grid;
+  place-items: center;
+  flex-shrink: 0;
+  overflow: hidden;
+  border-radius: 10px;
+  font-family: var(--font-display);
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.92);
+  text-shadow: 0 1px 6px rgba(0, 0, 0, 0.35);
+  background: linear-gradient(var(--ang, 135deg), var(--c1, var(--accent)), var(--c2, var(--surface)));
+}
+
+.cover img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.cover.xs {
+  width: 2.4rem;
+  height: 2.4rem;
+  border-radius: 7px;
+  font-size: 0.8rem;
+}
+
+.cover.sm {
+  width: 3.4rem;
+  height: 3.4rem;
+  font-size: 1rem;
+}
+
+.cover.md {
+  width: 4.6rem;
+  height: 4.6rem;
+  border-radius: 12px;
+  font-size: 1.35rem;
+}
+
+.cover.lg {
+  width: clamp(5.5rem, 22vw, 7.5rem);
+  height: clamp(5.5rem, 22vw, 7.5rem);
+  font-size: 1.8rem;
+}
+
+/* ---------- Chip & badge ---------- */
+
+.chip-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+}
+
+.chip-row:empty {
+  display: none;
+}
+
+.chip {
+  display: inline-block;
+  font-size: 0.72rem;
+  line-height: 1.3;
+  padding: 0.14rem 0.5rem;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--text) 9%, transparent);
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.chip.accent {
+  background: color-mix(in srgb, var(--accent) 20%, transparent);
+  color: var(--accent);
+}
+
+.chip.muted {
+  font-style: italic;
+}
+
+.match {
+  margin-left: auto;
+  flex-shrink: 0;
+  font-size: 0.75rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--accent);
+}
+
+/* ---------- Up Next ---------- */
+
+.up-next-btn {
+  padding: 0.45rem;
+}
+
+.up-next-btn.hero {
+  gap: 0.9rem;
+  padding: 0.75rem;
+  margin-bottom: 0.35rem;
+  border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent);
+  border-radius: 14px;
+  background: linear-gradient(
+    120deg,
+    color-mix(in srgb, var(--accent) 16%, transparent),
+    color-mix(in srgb, var(--surface) 60%, transparent)
+  );
+}
+
+.up-next-btn.hero .t-title {
+  font-size: 1.05rem;
+}
+
+.up-next-kicker {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.7rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+.up-next-kicker .match {
+  margin-left: 0;
+  padding: 0.05rem 0.4rem;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--accent) 18%, transparent);
+  letter-spacing: 0;
+}
+
+.up-next-meta .chip-row {
+  margin-top: 0.2rem;
+}
+
+.up-next-play {
+  margin-left: auto;
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  width: 2.4rem;
+  height: 2.4rem;
+  border-radius: 50%;
+  background: var(--accent);
+  color: var(--accent-contrast);
+  font-size: 0.9rem;
+  transition: transform 0.2s ease;
+}
+
+.up-next-btn.hero:hover .up-next-play {
+  transform: scale(1.08);
+}
+
+.up-next-btn .t-title,
+.up-next-btn .t-artist,
+.track-meta .t-title,
+.track-meta .t-artist {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rhythm-scene {
+    display: none;
+  }
+
+  .disc .cover.lg {
+    animation: none;
+  }
+
+  .now,
+  .disc,
+  .discovery-card {
+    transition: none;
+  }
+}
+
+/* Sampul hasil generate di piringan: tampil sebagai vinyl beralur, bukan inisial. */
+.disc .cover.lg.gen {
+  font-size: 0;
+  background:
+    repeating-radial-gradient(circle, rgba(0, 0, 0, 0) 0 3px, rgba(0, 0, 0, 0.18) 3px 4px),
+    conic-gradient(from var(--ang, 0deg), var(--c1), var(--c2), var(--c1));
 }

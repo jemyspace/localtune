@@ -5,6 +5,17 @@ export interface BasicTags {
   artist?: string
   album?: string
   genre?: string
+  coverUrl?: string
+}
+
+function pictureToUrl(picture?: { format?: string; data?: number[] }): string | undefined {
+  if (!picture?.data?.length) return undefined
+  try {
+    const blob = new Blob([new Uint8Array(picture.data)], { type: picture.format || 'image/jpeg' })
+    return URL.createObjectURL(blob)
+  } catch {
+    return undefined
+  }
 }
 
 export function titleFromFileName(fileName: string): string {
@@ -22,6 +33,7 @@ export function readTags(file: File): Promise<BasicTags> {
             album?: string
             genre?: string | { data?: string }
             TCON?: string | { data?: string }
+            picture?: { format?: string; data?: number[] }
           }
           const genreField = raw.genre ?? raw.TCON
           const genre =
@@ -33,6 +45,7 @@ export function readTags(file: File): Promise<BasicTags> {
             artist: raw.artist?.trim() || undefined,
             album: raw.album?.trim() || undefined,
             genre,
+            coverUrl: pictureToUrl(raw.picture),
           })
         },
         onError: () => resolve({}),
