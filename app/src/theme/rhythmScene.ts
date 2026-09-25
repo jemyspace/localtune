@@ -130,7 +130,12 @@ export class RhythmScene {
     this.canvas = canvas
     this.ctx = canvas.getContext('2d')!
     this.resize()
-    window.addEventListener('resize', () => this.resize())
+    // Kanvas mengikuti ukuran wadahnya (kartu "Sedang diputar"), bukan jendela.
+    if (typeof ResizeObserver === 'function') {
+      new ResizeObserver(() => this.resize()).observe(canvas)
+    } else {
+      window.addEventListener('resize', () => this.resize())
+    }
     window
       .matchMedia('(prefers-color-scheme: dark)')
       .addEventListener('change', () => this.readPalette())
@@ -181,8 +186,8 @@ export class RhythmScene {
 
   private resize(): void {
     this.dpr = Math.min(window.devicePixelRatio || 1, 1.5)
-    this.w = window.innerWidth
-    this.h = window.innerHeight
+    this.w = this.canvas.clientWidth || window.innerWidth
+    this.h = this.canvas.clientHeight || window.innerHeight
     this.canvas.width = Math.round(this.w * this.dpr)
     this.canvas.height = Math.round(this.h * this.dpr)
     this.ctx.setTransform(this.dpr, 0, 0, this.dpr, 0, 0)

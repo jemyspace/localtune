@@ -15,7 +15,14 @@ export interface AudioFeatures {
   tempoBpm: number | null
   mood: AudioMood
   analyzedAt: number
+  /** Kontur energi seluruh lagu (WAVEFORM_BINS nilai 0–1), untuk seek bar & intensitas. */
+  waveform?: number[]
+  /** Detik awal bagian paling bertenaga (mis. reff/drop). */
+  peakSec?: number
+  durationSec?: number
 }
+
+export const WAVEFORM_BINS = 160
 
 export interface AudioFeaturesBlob {
   schemaVersion: 1

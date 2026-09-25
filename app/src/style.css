@@ -1722,3 +1722,261 @@ input[type='range']:focus-visible::-webkit-slider-thumb {
       0 0 0 1px rgb(255 255 255 / 0.12);
   }
 }
+
+/* =========================================================
+   Adaptif v2: kartu "Sedang diputar" sebagai panggung lagu
+   ========================================================= */
+
+.now {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+  background:
+    radial-gradient(120% 140% at 0% 0%, color-mix(in oklab, var(--tint) 70%, transparent), transparent 60%),
+    var(--surface);
+  transition: background 0.6s ease;
+}
+
+/* Latar berirama kini hidup di dalam kartu, di belakang isi. */
+.now .rhythm-scene {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  width: 100%;
+  height: 100%;
+}
+
+.vibe-line {
+  max-width: 42ch;
+  margin: 0.7rem 0 0;
+  font-size: 1.02rem;
+  line-height: 1.5;
+  color: var(--text);
+}
+
+.now-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 1.1rem;
+}
+
+.pill-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.5rem 0.95rem;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  font-size: 0.88rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+
+.pill-btn:hover {
+  border-color: color-mix(in oklab, var(--accent) 50%, var(--line));
+}
+
+.pill-btn svg {
+  width: 1.1rem;
+  height: 1.1rem;
+  flex-shrink: 0;
+  fill: currentColor;
+}
+
+.pill-btn.icon-only {
+  padding: 0.5rem;
+}
+
+.pill-btn.on {
+  border-color: transparent;
+  background: var(--accent-soft);
+  color: var(--accent-text);
+}
+
+.pill-btn.pop svg {
+  animation: heart-pop 0.4s cubic-bezier(0.3, 1.6, 0.5, 1);
+}
+
+@keyframes heart-pop {
+  40% { transform: scale(1.35); }
+  100% { transform: scale(1); }
+}
+
+.stage-only {
+  display: none;
+}
+
+/* ---------- Mode panggung (layar penuh) ---------- */
+
+.now:fullscreen {
+  width: 100vw;
+  height: 100vh;
+  margin: 0;
+  border: 0;
+  border-radius: 0;
+  padding: clamp(2rem, 7vw, 6rem);
+  grid-template-columns: auto minmax(0, 1fr);
+  align-content: center;
+  gap: clamp(2rem, 6vw, 6rem);
+  background:
+    radial-gradient(120% 140% at 0% 0%, color-mix(in oklab, var(--tint) 80%, transparent), transparent 65%),
+    var(--bg);
+}
+
+.now:fullscreen .disc .cover.lg {
+  width: clamp(14rem, 34vw, 30rem);
+  height: clamp(14rem, 34vw, 30rem);
+}
+
+.now:fullscreen .now-title {
+  font-size: clamp(2.6rem, 6vw, 5.5rem);
+}
+
+.now:fullscreen .vibe-line {
+  font-size: 1.25rem;
+}
+
+.now:fullscreen .stage-only {
+  display: inline-flex;
+}
+
+.now:fullscreen .theme-active {
+  display: none;
+}
+
+.now::backdrop {
+  background: var(--bg);
+}
+
+@media (max-width: 760px) {
+  .now:fullscreen {
+    grid-template-columns: 1fr;
+    justify-items: center;
+    text-align: center;
+  }
+
+  .now-actions {
+    justify-content: center;
+  }
+}
+
+/* ---------- Seek bar gelombang ---------- */
+
+.wave-seek {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  height: 30px;
+}
+
+.wave {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  /* Warna dibaca oleh WaveSeek lewat getComputedStyle. */
+  color: var(--accent);
+  outline: 0 solid color-mix(in oklab, var(--text) 16%, transparent);
+}
+
+.wave-seek input[type='range'] {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.wave-seek input[type='range']::-webkit-slider-runnable-track {
+  height: 100%;
+  background: transparent;
+}
+
+.wave-seek input[type='range']::-moz-range-track,
+.wave-seek input[type='range']::-moz-range-progress {
+  background: transparent;
+}
+
+.wave-seek input[type='range']::-webkit-slider-thumb {
+  margin-top: 8px;
+  opacity: 0;
+}
+
+.wave-seek:hover input[type='range']::-webkit-slider-thumb,
+.wave-seek input[type='range']:focus-visible::-webkit-slider-thumb {
+  opacity: 1;
+}
+
+/* ---------- Kartu "Selanjutnya" di atas dock ---------- */
+
+.dock-next {
+  position: absolute;
+  left: 1rem;
+  bottom: calc(100% + 0.6rem);
+  display: grid;
+  gap: 0.1rem;
+  max-width: min(26rem, calc(100% - 2rem));
+  padding: 0.6rem 0.95rem;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--surface);
+  box-shadow: var(--shadow);
+  animation: rise 0.35s ease both;
+}
+
+.dock-next-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--accent-text);
+}
+
+.dock-next-title {
+  font-size: 0.9rem;
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ---------- Koleksi: nuansa & suka per lagu ---------- */
+
+.track-badges {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  margin-left: auto;
+  flex-shrink: 0;
+  padding-left: 0.5rem;
+}
+
+.track-vibe {
+  font-size: 0.75rem;
+  color: var(--muted);
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.track-liked svg {
+  display: block;
+  width: 0.9rem;
+  height: 0.9rem;
+  fill: var(--accent);
+}
+
+@media (max-width: 480px) {
+  .track-vibe {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pill-btn.pop svg,
+  .dock-next {
+    animation: none;
+  }
+}

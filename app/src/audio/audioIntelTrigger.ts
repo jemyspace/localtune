@@ -12,6 +12,16 @@ import { fingerprintAndLookup } from './fingerprintEngine'
 
 type Listener = () => void
 
+function waitForIdle(): Promise<void> {
+  return new Promise((resolve) => {
+    if (typeof window.requestIdleCallback === 'function') {
+      window.requestIdleCallback(() => resolve(), { timeout: 1500 })
+    } else {
+      setTimeout(resolve, 150)
+    }
+  })
+}
+
 export class AudioIntelTrigger {
   private readonly discoveryStore: DiscoveryStore
   private readonly tasteApi: TasteApi
@@ -57,9 +67,53 @@ export class AudioIntelTrigger {
     return normalizeLabel(track.artist) === 'unknown'
   }
 
+  /**
+   * Analisis seluruh koleksi satu per satu saat browser senggang, supaya
+   * rekomendasi & warna tiap lagu sudah siap sebelum lagu itu diputar.
+   */
+  analyzeLibraryInBackground(): void {
+    const pending = this.library.getAll().filter((t) => !t.error && !this.hasFullFeatures(t))
+    this.bgQueue = pending
+    this.bgTotal = pending.length
+    this.bgDone = 0
+    if (!this.bgRunning) void this.drainQueue()
+  }
+
+  /** Progres analisis latar belakang, untuk ditampilkan di UI. */
+  getBackgroundProgress(): { done: number; total: number } {
+    return { done: this.bgDone, total: this.bgTotal }
+  }
+
+  private bgQueue: Track[] = []
+  private bgRunning = false
+  private bgTotal = 0
+  private bgDone = 0
+
+  private hasFullFeatures(track: Track): boolean {
+    return !!this.featuresStore.get(trackKeyFor(track))?.waveform
+  }
+
+  private async drainQueue(): Promise<void> {
+    this.bgRunning = true
+    try {
+      while (this.bgQueue.length > 0) {
+        const track = this.bgQueue.shift()!
+        if (this.library.getById(track.id) && !this.hasFullFeatures(track)) {
+          await waitForIdle()
+          await this.runLocalAnalysis(track)
+        }
+        this.bgDone += 1
+        this.notify()
+      }
+    } finally {
+      this.bgRunning = false
+    }
+  }
+
   private async runLocalAnalysis(track: Track): Promise<void> {
     const key = trackKeyFor(track)
-    if (this.featuresStore.get(key) || this.inflightLocal.has(key)) return
+    // Data lama tanpa kontur energi dianalisis ulang agar seek bar gelombang tersedia.
+    if (this.featuresStore.get(key)?.waveform || this.inflightLocal.has(key)) return
     this.inflightLocal.add(key)
     try {
       const features = await analyzeTrack(track)

@@ -7,5 +7,10 @@ export const ICONS = {
   pause: svg('<rect x="6" y="5" width="4" height="14" rx="1.2"/><rect x="14" y="5" width="4" height="14" rx="1.2"/>'),
   prev: svg('<rect x="5" y="5" width="2.4" height="14" rx="1"/><path d="M19 6.2v11.6a1 1 0 0 1-1.52.85L9.2 13.03a1.2 1.2 0 0 1 0-2.06l8.28-5.62A1 1 0 0 1 19 6.2Z"/>'),
   next: svg('<rect x="16.6" y="5" width="2.4" height="14" rx="1"/><path d="M5 6.2v11.6a1 1 0 0 0 1.52.85l8.28-5.62a1.2 1.2 0 0 0 0-2.06L6.52 5.35A1 1 0 0 0 5 6.2Z"/>'),
+  heart: svg('<path d="M12 20s-7.5-4.6-9.2-9.3C1.7 7.6 3.6 4.5 6.9 4.5c2 0 3.4 1.1 4.1 2.4.7-1.3 2.1-2.4 4.1-2.4 3.3 0 5.2 3.1 4.1 6.2C19.5 15.4 12 20 12 20Z" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round"/>'),
+  heartFilled: svg('<path d="M12 20s-7.5-4.6-9.2-9.3C1.7 7.6 3.6 4.5 6.9 4.5c2 0 3.4 1.1 4.1 2.4.7-1.3 2.1-2.4 4.1-2.4 3.3 0 5.2 3.1 4.1 6.2C19.5 15.4 12 20 12 20Z"/>'),
+  peak: svg('<path d="M3 18h3.5l3-7 3 4 3.5-9 2 5H21" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/>'),
+  expand: svg('<path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/>'),
+  collapse: svg('<path d="M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/>'),
   volume: svg('<path d="M4 9.5v5a1 1 0 0 0 1 1h3l4.3 3.6a.6.6 0 0 0 1-.46V5.36a.6.6 0 0 0-1-.46L8 8.5H5a1 1 0 0 0-1 1Z"/><path d="M16.5 8.5a5 5 0 0 1 0 7" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>'),
 }

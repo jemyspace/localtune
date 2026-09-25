@@ -1,5 +1,5 @@
 import { AudioIntelTrigger } from './audio/audioIntelTrigger'
-import { MOOD_LABELS } from './audio/types'
+import { MOOD_LABELS, type AudioFeatures } from './audio/types'
 import { DiscoveryStore } from './discovery/discoveryStore'
 import { ResearchClient } from './discovery/researchClient'
 import { ResearchTrigger } from './discovery/researchTrigger'
@@ -12,6 +12,7 @@ import { Player } from './player'
 import { COLD_START_N } from './profile/types'
 import { UpNextEngine } from './profile/upNextEngine'
 import { isResearchEnabled, setResearchOptOut } from './settings'
+import { LikesStore } from './taste/likesStore'
 import { ListenTracker } from './taste/listenTracker'
 import { TasteApi } from './taste/tasteApi'
 import { prefersReducedMotion } from './theme/ambience'
@@ -22,17 +23,19 @@ import { trackKeyFor } from './trackKey'
 import type { Track } from './types'
 import { coverArtHtml } from './ui/coverArt'
 import { ICONS } from './ui/icons'
+import { vibeLine } from './ui/vibeCopy'
+import { WaveSeek } from './ui/waveSeek'
 import './style.css'
 
 const sceneCanvas = document.createElement('canvas')
 sceneCanvas.className = 'rhythm-scene'
 sceneCanvas.setAttribute('aria-hidden', 'true')
-document.body.prepend(sceneCanvas)
 
 const library = new Library()
 const player = new Player(library)
 const tasteApi = new TasteApi()
 const upNextEngine = new UpNextEngine()
+const likes = new LikesStore()
 const discoveryStore = new DiscoveryStore()
 const researchClient = new ResearchClient()
 const researchTrigger = new ResearchTrigger(researchClient, discoveryStore, tasteApi, library)
@@ -140,7 +143,14 @@ app.innerHTML = `
           <p class="now-label"><span class="live-dot" aria-hidden="true"></span>Sedang diputar</p>
           <h2 class="now-title" id="now-title">—</h2>
           <p class="now-artist" id="now-artist">—</p>
+          <p class="vibe-line" id="now-vibe-line" hidden></p>
           <div class="vibe-chips" id="now-vibe"></div>
+          <div class="now-actions">
+            <button type="button" class="pill-btn" id="btn-like" aria-pressed="false">${ICONS.heart}<span>Suka</span></button>
+            <button type="button" class="pill-btn" id="btn-peak" hidden>${ICONS.peak}<span id="peak-label">Loncat ke puncak</span></button>
+            <button type="button" class="pill-btn stage-only" id="btn-stage-play" aria-label="Putar">${ICONS.play}</button>
+            <button type="button" class="pill-btn icon-only" id="btn-stage" aria-label="Mode panggung (layar penuh)" title="Mode panggung">${ICONS.expand}</button>
+          </div>
           <p class="theme-active" id="theme-active" hidden></p>
         </div>
       </section>
@@ -215,6 +225,7 @@ app.innerHTML = `
       </div>
 
       <div class="dock" role="region" aria-label="Kontrol pemutar">
+        <div class="dock-next" id="dock-next" hidden aria-live="polite"></div>
         <div class="dock-track">
           <span class="dock-cover" id="dock-cover"></span>
           <span class="dock-meta">
@@ -230,7 +241,10 @@ app.innerHTML = `
           </div>
           <div class="progress">
             <span class="time" id="pos">0:00</span>
-            <input type="range" id="seek" min="0" max="0" value="0" step="0.1" aria-label="Posisi lagu" />
+            <div class="wave-seek">
+              <canvas class="wave" id="wave" aria-hidden="true"></canvas>
+              <input type="range" id="seek" min="0" max="0" value="0" step="0.1" aria-label="Posisi lagu" />
+            </div>
             <span class="time" id="dur">0:00</span>
           </div>
         </div>
@@ -242,7 +256,7 @@ app.innerHTML = `
     </main>
 
     <footer class="foot">
-      <p>Musik tetap di perangkatmu. Hosting hanya menyajikan aplikasinya. <span class="kbd">Spasi</span> putar/jeda · <span class="kbd">← →</span> geser 5 detik</p>
+      <p>Musik tetap di perangkatmu. Hosting hanya menyajikan aplikasinya. <span class="kbd">Spasi</span> putar/jeda · <span class="kbd">← →</span> geser 5 detik · <span class="kbd">L</span> suka · <span class="kbd">F</span> mode panggung</p>
     </footer>
   </div>
 `
@@ -285,6 +299,15 @@ const dockCoverEl = $('#dock-cover')
 const dockTitleEl = $('#dock-title')
 const dockArtistEl = $('#dock-artist')
 const playlistCountEl = $('#playlist-count')
+const vibeLineEl = $('#now-vibe-line')
+const btnLike = $('#btn-like')
+const btnPeak = $('#btn-peak')
+const peakLabelEl = $('#peak-label')
+const btnStage = $('#btn-stage')
+const btnStagePlay = $('#btn-stage-play')
+const dockNextEl = $('#dock-next')
+const waveSeek = new WaveSeek($('#wave') as HTMLCanvasElement)
+nowEl.prepend(sceneCanvas)
 
 function $(sel: string): HTMLElement {
   return app.querySelector(sel) as HTMLElement
@@ -301,7 +324,12 @@ function formatTime(sec?: number): string {
 function renderPlaylist(): void {
   const tracks = library.getAll()
   const current = player.current()
-  playlistCountEl.textContent = `${tracks.length} lagu`
+  const progress = audioIntel.getBackgroundProgress()
+  playlistCountEl.textContent =
+    progress.done < progress.total
+      ? `${tracks.length} lagu · membaca nuansa ${progress.done}/${progress.total}`
+      : `${tracks.length} lagu`
+  const store = audioIntel.getFeaturesStore()
   playlistEl.innerHTML = tracks
     .map(
       (t, i) => `
@@ -317,6 +345,7 @@ function renderPlaylist(): void {
           <span class="t-artist">${escapeHtml(t.artist)}</span>
           ${t.error ? `<span class="t-err">${escapeHtml(t.error)}</span>` : ''}
         </span>
+        ${trackBadges(t, store.get(trackKeyFor(t)))}
       </button>
     </li>`,
     )
@@ -328,6 +357,15 @@ function renderPlaylist(): void {
       void player.playIndex(i, true)
     })
   })
+}
+
+function trackBadges(t: Track, features: AudioFeatures | null): string {
+  if (t.error) return ''
+  const liked = likes.has(trackKeyFor(t)) ? `<span class="track-liked" title="Kamu suka">${ICONS.heartFilled}</span>` : ''
+  const vibe = features
+    ? `<span class="track-vibe">${MOOD_LABELS[features.mood]}${features.tempoBpm ? ` · ${features.tempoBpm}` : ''}</span>`
+    : ''
+  return liked || vibe ? `<span class="track-badges">${liked}${vibe}</span>` : ''
 }
 
 function escapeHtml(s: string): string {
@@ -431,7 +469,7 @@ function renderDiscovery(): void {
 
 function refreshUpNext(): void {
   const currentId = player.current()?.id ?? null
-  upNextEngine.refresh(library, currentId, tasteApi, audioIntel.getFeaturesStore())
+  upNextEngine.refresh(library, currentId, tasteApi, audioIntel.getFeaturesStore(), likes)
   player.setNextResolver(() => upNextEngine.getNextIndex())
   renderTaste()
   renderUpNext()
@@ -448,8 +486,8 @@ function renderUpNext(): void {
     const remaining = COLD_START_N - profile.meaningfulPlayCount
     upNextNoteEl.textContent =
       remaining > 0
-        ? `Sedang mengenal seleramu — ${remaining} lagu lagi sampai antrean jadi personal.`
-        : 'Sedang mengenal seleramu…'
+        ? `Mengalir dari nuansa lagu ini · makin personal setelah ${remaining} lagu lagi.`
+        : 'Mengalir dari nuansa lagu ini.'
   } else if (profile.reason) {
     upNextNoteEl.textContent = profile.reason
   } else {
@@ -558,12 +596,15 @@ function renderAppearance(): void {
     const sceneKind = themeController.getSceneKind()
     const scenePart =
       sceneKind && themeController.isSceneEnabled() ? ` · latar ${SCENE_LABELS[sceneKind]}` : ''
-    themeActiveEl.textContent = `Tema aktif: ${THEME_LABELS[themeId]}${moodPart}${scenePart}`
+    const source = themeController.getPaletteSource()
+    const colorPart =
+      source === 'cover' ? 'Warna dari sampul album' : source === 'mood' ? 'Warna dari suasana lagu' : `Warna genre ${THEME_LABELS[themeId]}`
+    themeActiveEl.textContent = `${colorPart}${moodPart}${scenePart}`
   }
 
   appearanceHintEl.textContent = adaptive
-    ? 'Warna dan latar dipilih dari genre serta analisis irama lagu — semuanya dihitung di perangkatmu.'
-    : 'Pilih mode Adaptif di atas agar tampilan ikut berubah mengikuti genre dan irama setiap lagu.'
+    ? 'Setiap lagu punya warnanya sendiri — dari sampul album atau suasana lagunya — dan latar bergerak mengikuti ketukannya. Semua dihitung di perangkatmu.'
+    : 'Pilih mode Adaptif di atas agar warna dan latar ikut berubah mengikuti setiap lagu.'
 }
 
 let lastDiscKey = ''
@@ -597,6 +638,23 @@ function renderNowVibe(t: Track | undefined): void {
   }
   if (t?.genre && t.genre !== 'Unknown') chips.push(`<span class="chip">${escapeHtml(t.genre)}</span>`)
   nowVibeEl.innerHTML = chips.join('')
+
+  const line = features && t ? vibeLine(features, `${t.artist}|${t.title}`) : ''
+  vibeLineEl.textContent = line
+  vibeLineEl.hidden = !line
+
+  const liked = t ? likes.has(trackKeyFor(t)) : false
+  btnLike.hidden = !t
+  btnLike.setAttribute('aria-pressed', String(liked))
+  btnLike.classList.toggle('on', liked)
+  btnLike.innerHTML = `${liked ? ICONS.heartFilled : ICONS.heart}<span>${liked ? 'Disukai' : 'Suka'}</span>`
+
+  const peak = features?.peakSec
+  btnPeak.hidden = peak == null || peak < 5
+  if (peak != null) peakLabelEl.textContent = `Loncat ke puncak · ${formatTime(peak)}`
+
+  const dur = features?.durationSec
+  waveSeek.setData(features?.waveform, peak != null && dur ? peak / dur : null)
 }
 
 function applyThemeForCurrentTrack(): void {
@@ -619,6 +677,8 @@ function renderNow(): void {
   renderNowVibe(t)
   btnPlay.innerHTML = player.isPlaying() ? ICONS.pause : ICONS.play
   btnPlay.setAttribute('aria-label', player.isPlaying() ? 'Jeda' : 'Putar')
+  btnStagePlay.innerHTML = player.isPlaying() ? ICONS.pause : ICONS.play
+  btnStagePlay.setAttribute('aria-label', player.isPlaying() ? 'Jeda' : 'Putar')
 
   const audio = player.getAudio()
   const dur = t?.durationSec ?? (Number.isFinite(audio.duration) ? audio.duration : 0)
@@ -638,7 +698,27 @@ function tick(): void {
   const max = Number(seekEl.max) || 0
   seekEl.style.setProperty('--fill', `${max > 0 ? (Number(seekEl.value) / max) * 100 : 0}%`)
   volumeEl.style.setProperty('--fill', `${Number(volumeEl.value) * 100}%`)
+  waveSeek.draw(max > 0 ? Number(seekEl.value) / max : 0)
+  renderDockNext(max - (audio.currentTime || 0))
   requestAnimationFrame(tick)
+}
+
+let dockNextKey = ''
+/** Kartu kecil "Selanjutnya" muncul ±15 detik sebelum lagu habis. */
+function renderDockNext(remainingSec: number): void {
+  const next = upNextEngine.getItems()[0]
+  const show = player.isPlaying() && !!next && remainingSec > 0.5 && remainingSec < 15
+  if (!show || !next) {
+    if (!dockNextEl.hidden) dockNextEl.hidden = true
+    return
+  }
+  const key = `${next.trackId}|${next.match ?? ''}`
+  if (key !== dockNextKey) {
+    dockNextKey = key
+    const match = next.match != null ? ` · cocok ${next.match}%` : ''
+    dockNextEl.innerHTML = `<span class="dock-next-label">Selanjutnya${match}</span><span class="dock-next-title">${escapeHtml(next.title)} — ${escapeHtml(next.artist)}</span>`
+  }
+  if (dockNextEl.hidden) dockNextEl.hidden = false
 }
 
 player.onChange = () => renderNow()
@@ -709,6 +789,7 @@ uiModeInputs.forEach((input) => {
 audioIntel.subscribe(() => {
   themeController.onTrackChange(player.current())
   refreshUpNext()
+  renderPlaylist()
   renderNowVibe(player.current())
   renderAppearance()
 })
@@ -717,7 +798,10 @@ sceneEnabledEl.addEventListener('change', () => {
   themeController.setSceneEnabled(sceneEnabledEl.checked)
 })
 
-themeController.subscribe(() => renderAppearance())
+themeController.subscribe(() => {
+  renderAppearance()
+  waveSeek.refreshColors()
+})
 renderAppearance()
 
 app.querySelectorAll<HTMLButtonElement>('.js-pick').forEach((btn) => {
@@ -756,7 +840,50 @@ window.addEventListener('keydown', (e) => {
     e.preventDefault()
     const delta = e.code === 'ArrowRight' ? 5 : -5
     player.seek(player.getAudio().currentTime + delta)
+  } else if (e.code === 'KeyL') {
+    toggleLikeCurrent()
+  } else if (e.code === 'KeyF') {
+    void toggleStage()
   }
+})
+
+function toggleLikeCurrent(): void {
+  const t = player.current()
+  if (!t || t.error) return
+  const liked = likes.toggle(trackKeyFor(t))
+  btnLike.classList.remove('pop')
+  void btnLike.offsetWidth
+  if (liked) btnLike.classList.add('pop')
+}
+
+async function toggleStage(): Promise<void> {
+  try {
+    if (document.fullscreenElement) await document.exitFullscreen()
+    else await nowEl.requestFullscreen()
+  } catch {
+    /* layar penuh tidak didukung/ditolak */
+  }
+}
+
+document.addEventListener('fullscreenchange', () => {
+  const on = document.fullscreenElement === nowEl
+  btnStage.innerHTML = on ? ICONS.collapse : ICONS.expand
+  btnStage.setAttribute('aria-label', on ? 'Keluar dari mode panggung' : 'Mode panggung (layar penuh)')
+})
+
+btnLike.addEventListener('click', () => toggleLikeCurrent())
+btnPeak.addEventListener('click', () => {
+  const t = player.current()
+  const peak = t ? audioIntel.getFeaturesStore().get(trackKeyFor(t))?.peakSec : undefined
+  if (peak != null) player.seek(peak)
+})
+btnStage.addEventListener('click', () => void toggleStage())
+btnStagePlay.addEventListener('click', () => void player.togglePlay())
+
+likes.subscribe(() => {
+  refreshUpNext()
+  renderPlaylist()
+  renderNowVibe(player.current())
 })
 
 async function addAndPlay(files: File[]): Promise<void> {
@@ -773,6 +900,7 @@ async function addAndPlay(files: File[]): Promise<void> {
   // re-render when tags arrive
   setTimeout(() => renderNow(), 400)
   setTimeout(() => renderNow(), 1200)
+  setTimeout(() => audioIntel.analyzeLibraryInBackground(), 1500)
 }
 
 btnClear.addEventListener('click', () => {

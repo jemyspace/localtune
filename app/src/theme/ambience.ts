@@ -17,6 +17,9 @@ export interface RhythmFrame {
 type FrameListener = (frame: RhythmFrame) => void
 
 const MIN_BEAT_GAP_MS = 240
+/** Peluruhan puncak per frame (~60 fps): puncak turun setengah dalam ±20 detik. */
+const PEAK_DECAY = 0.99942
+const MAX_GAIN = 6
 const PULSE_DECAY = 0.9
 
 function bandAverage(data: Uint8Array, from: number, to: number): number {
@@ -36,6 +39,7 @@ export class AmbienceController {
 
   private prevBass = 0
   private fluxAvg = 0
+  private peakLevel = 0
   private lastBeatAt = 0
   private frame: RhythmFrame = { bass: 0, mid: 0, high: 0, level: 0, beat: false, pulse: 0 }
 
@@ -53,6 +57,13 @@ export class AmbienceController {
     } catch {
       this.attached = false
     }
+  }
+
+  /** Dipanggil saat lagu berganti agar gain dihitung ulang dari lagu baru. */
+  resetGain(): void {
+    this.peakLevel = 0
+    this.fluxAvg = 0
+    this.prevBass = 0
   }
 
   resumeIfNeeded(): void {
@@ -85,18 +96,27 @@ export class AmbienceController {
     const tick = (now: number): void => {
       if (!this.enabled) return
       analyser.getByteFrequencyData(data)
-      const bass = bandAverage(data, 0, bassEnd)
-      const mid = bandAverage(data, bassEnd, midEnd)
-      const high = bandAverage(data, midEnd, highEnd)
-      const level = bass * 0.45 + mid * 0.4 + high * 0.15
+      const rawBass = bandAverage(data, 0, bassEnd)
+      const rawMid = bandAverage(data, bassEnd, midEnd)
+      const rawHigh = bandAverage(data, midEnd, highEnd)
+      const rawLevel = rawBass * 0.45 + rawMid * 0.4 + rawHigh * 0.15
+
+      // Adaptive gain: skala terhadap puncak lagu ini (meluruh pelan), jadi lagu
+      // yang direkam pelan tetap menggerakkan visual dan lagu keras tidak mentok.
+      this.peakLevel = Math.max(rawLevel, this.peakLevel * PEAK_DECAY)
+      const gain = Math.min(MAX_GAIN, 0.75 / Math.max(0.08, this.peakLevel))
+      const bass = Math.min(1, rawBass * gain)
+      const mid = Math.min(1, rawMid * gain)
+      const high = Math.min(1, rawHigh * gain)
+      const level = Math.min(1, rawLevel * gain)
 
       // Onset: lonjakan bass antar-frame (flux) jauh di atas rata-rata flux berjalan.
       // Tahan terhadap bass yang terus-menerus tinggi (pad, bassline panjang).
       const flux = Math.max(0, bass - this.prevBass)
       this.prevBass = bass
       const beat =
-        bass > 0.12 &&
-        flux > Math.max(0.035, this.fluxAvg * 2.4) &&
+        bass > 0.2 &&
+        flux > Math.max(0.05, this.fluxAvg * 2.4) &&
         now - this.lastBeatAt > MIN_BEAT_GAP_MS
       if (beat) this.lastBeatAt = now
       this.fluxAvg = this.fluxAvg * 0.93 + flux * 0.07

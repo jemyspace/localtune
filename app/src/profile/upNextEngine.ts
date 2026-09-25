@@ -77,11 +77,40 @@ function featureReasons(
   return { reasons, match: Math.round(vibeSimilarity(current, other) * 100) }
 }
 
+/** Cukup `has()` — dipenuhi oleh LikesStore. */
+export interface LikesLookup {
+  has(trackKey: string): boolean
+}
+
+const LIKED_REASON = 'Lagu yang kamu suka'
+
+/**
+ * Mode belajar (cold start): antrean mengalir berdasarkan kecocokan nuansa
+ * dengan lagu sekarang — bukan sekadar urutan playlist — dan lagu yang disukai
+ * didahulukan. Lagu yang belum dianalisis tetap di urutan playlist.
+ */
+function flowItems(
+  playable: PlayableEntry[],
+  currentTrackId: string | null,
+  tasteApi: TasteApi,
+  featuresStore?: AudioFeaturesStore,
+  likes?: LikesLookup,
+): UpNextItem[] {
+  const items = sequentialItems(playable, currentTrackId, tasteApi, featuresStore, likes)
+  const rank = (item: UpNextItem): number =>
+    (item.reasons.includes(LIKED_REASON) ? 100 : 0) + (item.match ?? -1)
+  return items
+    .map((item, order) => ({ item, order }))
+    .sort((a, b) => rank(b.item) - rank(a.item) || a.order - b.order)
+    .map(({ item }) => item)
+}
+
 function sequentialItems(
   playable: PlayableEntry[],
   currentTrackId: string | null,
   tasteApi: TasteApi,
   featuresStore?: AudioFeaturesStore,
+  likes?: LikesLookup,
 ): UpNextItem[] {
   const curPos = currentTrackId
     ? playable.findIndex((p) => p.track.id === currentTrackId)
@@ -101,6 +130,7 @@ function sequentialItems(
     const key = trackKeyFor(track)
     const vibe = featureReasons(currentFeatures, featuresStore?.get(key) ?? null)
     const reasons = [...vibe.reasons]
+    if (likes?.has(key)) reasons.unshift(LIKED_REASON)
     if (!tasteApi.getTrackStats(key)) reasons.push('Belum pernah diputar')
     if (reasons.length === 0) reasons.push('Urutan playlist')
     items.push({
@@ -157,6 +187,7 @@ function rankedItems(
   currentTrackId: string | null,
   tasteApi: TasteApi,
   featuresStore?: AudioFeaturesStore,
+  likes?: LikesLookup,
 ): UpNextItem[] {
   const now = Date.now()
   const candidates = playable.filter((p) => p.track.id !== currentTrackId)
@@ -178,16 +209,19 @@ function rankedItems(
     const vibe = featureReasons(currentFeatures, featuresStore?.get(key) ?? null)
     const vibeBoost = vibe.match != null ? (vibe.match / 100) * 0.15 : 0
     const neverPlayed = !tasteApi.getTrackStats(key)
+    const liked = likes?.has(key) ?? false
     const score =
       0.5 * (normArtist[i] ?? 0) +
       0.25 * (normGenre[i] ?? 0) +
       0.25 * (normTrack[i] ?? 0) +
       vibeBoost +
+      (liked ? 0.3 : 0) +
       (neverPlayed ? 0.05 : 0) +
       stableNoise(p.track.id)
 
     const reasons: string[] = [...vibe.reasons]
     if ((normArtist[i] ?? 0) >= 0.6 && isKnown(p.track.artist)) reasons.unshift('Artis favoritmu')
+    if (liked) reasons.unshift(LIKED_REASON)
     if ((normGenre[i] ?? 0) >= 0.6 && isKnown(p.track.genre)) reasons.push(`Genre favorit · ${p.track.genre}`)
     if ((normTrack[i] ?? 0) >= 0.6) reasons.push('Sering kamu dengar sampai habis')
     if (neverPlayed) reasons.push('Belum pernah diputar')
@@ -210,7 +244,7 @@ function rankedItems(
 
   const allZero = pool.every((s) => s.score <= 0.0001)
   if (allZero) {
-    return sequentialItems(playable, currentTrackId, tasteApi, featuresStore)
+    return flowItems(playable, currentTrackId, tasteApi, featuresStore, likes)
   }
 
   return diversify(pool.sort((a, b) => b.score - a.score)).map(
@@ -233,14 +267,15 @@ export class UpNextEngine {
     currentTrackId: string | null,
     tasteApi: TasteApi,
     featuresStore?: AudioFeaturesStore,
+    likes?: LikesLookup,
   ): void {
     this.profile = buildProfile(tasteApi)
     const playable = playableEntries(library)
 
     if (this.profile.coldStart || this.profile.meaningfulPlayCount < COLD_START_N) {
-      this.items = sequentialItems(playable, currentTrackId, tasteApi, featuresStore)
+      this.items = flowItems(playable, currentTrackId, tasteApi, featuresStore, likes)
     } else {
-      this.items = rankedItems(playable, currentTrackId, tasteApi, featuresStore)
+      this.items = rankedItems(playable, currentTrackId, tasteApi, featuresStore, likes)
     }
   }
 
