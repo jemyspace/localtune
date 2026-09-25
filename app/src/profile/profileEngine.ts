@@ -36,7 +36,7 @@ export function scoreGenre(stats: GenreStats): number {
 function buildReason(topArtists: { name: string; score: number }[]): string | undefined {
   const top = topArtists.find((a) => normalizeLabel(a.name) !== 'unknown' && a.score > 0)
   if (!top) return undefined
-  return `Karena Anda sering menyelesaikan lagu artis ${top.name}`
+  return `Karena kamu sering menuntaskan lagu dari ${top.name}`
 }
 
 export function buildProfile(tasteApi: TasteApi): TasteProfile {

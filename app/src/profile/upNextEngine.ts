@@ -187,11 +187,11 @@ function rankedItems(
       stableNoise(p.track.id)
 
     const reasons: string[] = [...vibe.reasons]
-    if ((normArtist[i] ?? 0) >= 0.6 && isKnown(p.track.artist)) reasons.unshift('Artis favorit Anda')
+    if ((normArtist[i] ?? 0) >= 0.6 && isKnown(p.track.artist)) reasons.unshift('Artis favoritmu')
     if ((normGenre[i] ?? 0) >= 0.6 && isKnown(p.track.genre)) reasons.push(`Genre favorit · ${p.track.genre}`)
-    if ((normTrack[i] ?? 0) >= 0.6) reasons.push('Sering Anda dengar sampai habis')
+    if ((normTrack[i] ?? 0) >= 0.6) reasons.push('Sering kamu dengar sampai habis')
     if (neverPlayed) reasons.push('Belum pernah diputar')
-    if (reasons.length === 0) reasons.push('Dari library Anda')
+    if (reasons.length === 0) reasons.push('Dari koleksimu')
 
     return {
       trackId: p.track.id,
